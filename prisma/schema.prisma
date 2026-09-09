@@ -1,0 +1,155 @@
+// MarginSnap — Prisma schema
+// Matches the data model in the Blueprint (§4), plus the auth tables NextAuth's
+// Prisma adapter needs. `marketplace` on Shop is the hook for expanding beyond
+// Etsy later (see Blueprint §3/§Architecture) — everything else assumes Etsy.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth (NextAuth / Auth.js — email magic link) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  // Billing
+  stripeCustomerId     String?   @unique
+  subscriptionStatus   String?   // e.g. "trialing" | "active" | "past_due" | "canceled"
+  subscriptionPriceId  String?
+
+  accounts Account[]
+  sessions Session[]
+  shops    Shop[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------- Product data (Blueprint §4) ----------
+
+model Shop {
+  id          String   @id @default(cuid())
+  userId      String
+  marketplace String   @default("etsy") // hook for a second marketplace later — see Blueprint §Architecture
+
+  etsyShopId  BigInt?
+  shopName    String?
+
+  // Encrypted at rest by the app layer before being written here — never store plaintext tokens.
+  accessTokenEnc  String? @db.Text
+  refreshTokenEnc String? @db.Text
+  tokenExpiresAt  DateTime?
+
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings Listing[]
+  orders   Order[]
+
+  @@index([userId])
+  @@map("shops")
+}
+
+model Listing {
+  id            String   @id @default(cuid())
+  shopId        String
+  etsyListingId BigInt
+  title         String
+  sku           String?
+  cogsAmount    Decimal? @db.Decimal(10, 2) // null until the seller sets it — never default to 0
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderLineItems OrderLineItem[]
+
+  @@unique([shopId, etsyListingId])
+  @@index([shopId])
+  @@map("listings")
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  shopId         String
+  etsyReceiptId  BigInt
+  orderDate      DateTime
+  grossAmount    Decimal  @db.Decimal(10, 2)
+  feesBreakdown  Json     // { transactionFee, paymentProcessingFee, listingFeeShare, offsiteAdsFee, ... }
+  shippingCost   Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt      DateTime @default(now())
+
+  shop      Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lineItems OrderLineItem[]
+
+  @@unique([shopId, etsyReceiptId])
+  @@index([shopId, orderDate])
+  @@map("orders")
+}
+
+model OrderLineItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  listingId   String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+
+  // Snapshotted at sync time from Listing.cogsAmount — editing COGS later never
+  // rewrites history (Blueprint §4).
+  cogsAtSale  Decimal? @db.Decimal(10, 2)
+  lineProfit  Decimal? @db.Decimal(10, 2) // null when cogsAtSale is null — "add a cost to see profit"
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([listingId])
+  @@map("order_line_items")
+}
