@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encryptToken } from "@/lib/crypto";
 import { exchangeCodeForTokens, extractUserIdFromAccessToken, getShopForUser } from "@/lib/etsy";
+import { syncShop } from "@/lib/sync";
 
 // Finishes the OAuth flow (Blueprint workflow §1, steps 3-4): exchanges the
 // code for tokens, resolves the seller's shop, stores it encrypted, and kicks
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
   // once this runs against a live token (see the note at the top of src/lib/etsy.ts).
   const shop = shopsResponse?.results?.[0];
 
-  await prisma.shop.create({
+  const newShop = await prisma.shop.create({
     data: {
       userId: session.user.id,
       marketplace: "etsy",
@@ -54,9 +55,15 @@ export async function GET(request: Request) {
     },
   });
 
-  // TODO (Phase 2/3): trigger the initial 90-day backfill here rather than
-  // waiting for the next scheduled /api/cron/sync tick, so the seller doesn't
-  // stare at an empty dashboard for up to 30 minutes after connecting.
+  // Sync immediately so the seller sees real data right away instead of
+  // waiting for the next scheduled cron run (which, on Vercel's free Hobby
+  // plan, could be up to 24 hours away). Best-effort: if this throws, the
+  // shop is still connected and the next cron run will pick it up.
+  try {
+    await syncShop(newShop);
+  } catch (err) {
+    console.error("Initial sync after connect failed:", err);
+  }
 
   const response = NextResponse.redirect(new URL("/dashboard?connected=1", request.url));
   response.cookies.delete("etsy_oauth_verifier");
