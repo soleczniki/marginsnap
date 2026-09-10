@@ -101,10 +101,16 @@ export default async function Dashboard({
           <SyncButton />
         </div>
 
-        {listingsMissingCogs > 0 && (
-          <div className="card" style={{ marginBottom: 20, borderColor: "var(--accent)" }}>
-            {listingsMissingCogs} listing{listingsMissingCogs === 1 ? "" : "s"} still need a cost
-            set before their profit shows — that entry screen is next up (Roadmap Phase 3).
+        {listings.length > 0 && (
+          <div className="card" style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span>
+              {listingsMissingCogs > 0
+                ? `${listingsMissingCogs} listing${listingsMissingCogs === 1 ? "" : "s"} still need a cost set before their profit shows.`
+                : "All your listings have a cost set."}
+            </span>
+            <a href="/dashboard/listings" className="button">
+              Manage costs
+            </a>
           </div>
         )}
 
