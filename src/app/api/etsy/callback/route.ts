@@ -39,6 +39,9 @@ export async function GET(request: Request) {
 
   const etsyUserId = extractUserIdFromAccessToken(tokens.access_token);
   const shopsResponse = await getShopForUser(tokens.access_token, etsyUserId);
+  // TEMPORARY DEBUG: log the raw shape so we can see what Etsy actually
+  // returns, then fix the `shop` extraction below to match and remove this.
+  console.log("RAW ETSY SHOPS RESPONSE:", JSON.stringify(shopsResponse));
   // ⚠️ Shape unverified — confirm the real response has `results: [{ shop_id, shop_name }]`
   // once this runs against a live token (see the note at the top of src/lib/etsy.ts).
   const shop = shopsResponse?.results?.[0];
