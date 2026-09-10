@@ -17,7 +17,14 @@ export default async function Dashboard({
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
 
-  const shop = await prisma.shop.findFirst({ where: { userId: session.user.id } });
+  const [shop, user] = await Promise.all([
+    prisma.shop.findFirst({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id } }),
+  ]);
+
+  // "active" or "trialing" are the only statuses that mean "currently paying" —
+  // everything else (past_due, canceled, or never subscribed) shows "Upgrade."
+  const isSubscribed = user?.subscriptionStatus === "active" || user?.subscriptionStatus === "trialing";
 
   const header = (
     <header
@@ -28,12 +35,22 @@ export default async function Dashboard({
         padding: "16px 24px",
         borderBottom: "1px solid var(--line)",
         marginBottom: 24,
+        gap: 16,
+        flexWrap: "wrap",
       }}
     >
       <span style={{ fontWeight: 700 }}>MarginSnap</span>
-      <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-        Sign out
-      </a>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <a
+          href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
+          style={{ fontSize: "0.85rem", color: "var(--muted)" }}
+        >
+          {isSubscribed ? "Manage billing" : "Upgrade (currently free)"}
+        </a>
+        <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Sign out
+        </a>
+      </div>
     </header>
   );
 
