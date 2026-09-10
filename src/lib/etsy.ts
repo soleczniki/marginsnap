@@ -107,10 +107,13 @@ export async function refreshAccessToken(refreshToken: string): Promise<EtsyToke
 
 async function etsyGet(path: string, accessToken: string) {
   const clientId = requireEnv("ETSY_KEYSTRING");
+  const sharedSecret = requireEnv("ETSY_SHARED_SECRET");
+  // As of Etsy's Feb 9, 2026 API change, x-api-key must be "keystring:shared_secret"
+  // — the keystring alone (what older docs describe) is no longer accepted.
   const res = await fetch(`${ETSY_API_BASE}${path}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "x-api-key": clientId,
+      "x-api-key": `${clientId}:${sharedSecret}`,
     },
   });
   if (!res.ok) {
