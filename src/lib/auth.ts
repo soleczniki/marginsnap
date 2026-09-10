@@ -20,6 +20,9 @@ export const authOptions: NextAuthOptions = {
         },
       },
       from: process.env.EMAIL_FROM ?? "MarginSnap <hello@marginsnap.app>",
+      // Short-lived on purpose: the landing page shows a 5-minute countdown
+      // that matches this, then offers "Request a new sign-in link".
+      maxAge: 60 * 5,
     }),
   ],
   pages: {
