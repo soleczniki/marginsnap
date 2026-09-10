@@ -27,9 +27,26 @@ export async function POST(request: Request) {
         const checkoutSession = event.data.object as Stripe.Checkout.Session;
         const userId = checkoutSession.client_reference_id;
         if (userId && checkoutSession.customer) {
+          // Fetch the subscription's own status here rather than relying on a
+          // separate customer.subscription.* event to fill it in — Stripe
+          // doesn't guarantee delivery order, so that event can (and does)
+          // sometimes arrive first, before stripeCustomerId is even saved,
+          // and would otherwise silently find no matching user to update.
+          let subscriptionStatus: string | null = null;
+          let subscriptionPriceId: string | null = null;
+          if (checkoutSession.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(
+              String(checkoutSession.subscription)
+            );
+            subscriptionStatus = subscription.status;
+            subscriptionPriceId = subscription.items.data[0]?.price.id ?? null;
+          }
           await prisma.user.update({
             where: { id: userId },
-            data: { stripeCustomerId: String(checkoutSession.customer) },
+            data: {
+              stripeCustomerId: String(checkoutSession.customer),
+              ...(subscriptionStatus ? { subscriptionStatus, subscriptionPriceId } : {}),
+            },
           });
         }
         break;
