@@ -131,6 +131,8 @@ export function extractUserIdFromAccessToken(accessToken: string): string {
   return userId;
 }
 
+// Verified against a live key: returns the shop object directly
+// (e.g. { shop_id, shop_name, user_id, ... }), not wrapped in a `results` array.
 export async function getShopForUser(accessToken: string, etsyUserId: string) {
   return etsyGet(`/users/${etsyUserId}/shops`, accessToken);
 }

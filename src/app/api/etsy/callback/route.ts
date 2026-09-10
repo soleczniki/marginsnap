@@ -38,13 +38,15 @@ export async function GET(request: Request) {
   });
 
   const etsyUserId = extractUserIdFromAccessToken(tokens.access_token);
-  const shopsResponse = await getShopForUser(tokens.access_token, etsyUserId);
-  // TEMPORARY DEBUG: log the raw shape so we can see what Etsy actually
-  // returns, then fix the `shop` extraction below to match and remove this.
-  console.error("RAW ETSY SHOPS RESPONSE:", JSON.stringify(shopsResponse));
-  // ⚠️ Shape unverified — confirm the real response has `results: [{ shop_id, shop_name }]`
-  // once this runs against a live token (see the note at the top of src/lib/etsy.ts).
-  const shop = shopsResponse?.results?.[0];
+  // Verified against a live key: this returns the shop object directly
+  // (e.g. { shop_id, shop_name, user_id, ... }) — NOT wrapped in a
+  // `results` array like the pre-launch draft of this code assumed.
+  const shop = await getShopForUser(tokens.access_token, etsyUserId);
+
+  // One shop per account in this version (Blueprint decision). If this user
+  // already has a shop connected, replace it (cascades to its listings/orders)
+  // rather than accumulating duplicate rows on every reconnect.
+  await prisma.shop.deleteMany({ where: { userId: session.user.id } });
 
   const newShop = await prisma.shop.create({
     data: {
