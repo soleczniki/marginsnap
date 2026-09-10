@@ -114,7 +114,14 @@ export default async function Dashboard({
           </div>
         )}
 
-        <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>Recent orders</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <h2 style={{ fontSize: "1.05rem" }}>Recent orders</h2>
+          {orders.length > 0 && (
+            <a href="/api/export/csv" className="button" style={{ fontSize: "0.85rem" }}>
+              Export CSV
+            </a>
+          )}
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders synced yet.</p>}
           {orders.map((order) => {
