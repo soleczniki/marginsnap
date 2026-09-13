@@ -209,6 +209,7 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
 
     for (const { transaction, listing, cogs, unitPrice } of resolvedItems) {
       const lineProfit = cogs !== null ? unitPrice - cogs : null; // fee/shipping share TODO
+      const quantity = transaction.quantity ?? 1;
 
       await prisma.orderLineItem.upsert({
         where: { id: `${order.id}:${listing.id}` }, // placeholder composite — see file header note in cron route
@@ -216,12 +217,19 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
           id: `${order.id}:${listing.id}`,
           orderId: order.id,
           listingId: listing.id,
-          quantity: transaction.quantity ?? 1,
+          quantity,
           unitPrice,
           cogsAtSale: cogs,
           lineProfit,
         },
-        update: { cogsAtSale: cogs, lineProfit },
+        // unitPrice/quantity recomputed every sync too, not just cogsAtSale/
+        // lineProfit — same reasoning as Order's fields (file header): none
+        // of this is seller-edited. Without this, a line item created before
+        // a computation fix (the money()/divisor fix, in this case) stays
+        // frozen at its old wrong value forever, the same class of bug the
+        // sync-window fix addressed at the Order level. Found via the
+        // Products table showing €200 revenue on a real €2 item.
+        update: { unitPrice, quantity, cogsAtSale: cogs, lineProfit },
       });
     }
     ordersSynced++;
