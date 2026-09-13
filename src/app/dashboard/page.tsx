@@ -3,19 +3,21 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SyncButton } from "@/components/SyncButton";
-import { OrderRow } from "@/components/OrderRow";
+import { OrderRow, type OrderRowItem } from "@/components/OrderRow";
+import { DayGroup, type DayOrder } from "@/components/DayGroup";
+import { PeriodPicker } from "@/components/PeriodPicker";
+import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
-import type { FeeEngineBreakdown } from "@/lib/feeEngine";
+import { isPeriodKey, periodRange, type PeriodKey } from "@/lib/periods";
+import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
 
-// V1 of the dashboard (Blueprint workflow §4). Deliberately minimal —
-// per-listing COGS entry (workflow §2) and CSV export are Phase 3 work, not
-// this scaffold. The point here is: does a connected shop's real data render
-// correctly end to end, with an honest "has this actually synced yet" state
-// instead of a static "syncing…" that never changes.
+// V1 of the dashboard (Blueprint workflow §4), now Phase-2 shaped
+// (PROJECT.md roadmap): a period picker, orders grouped by day, and a
+// per-product profitability table — not just a flat recent-orders list.
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: { connected?: string };
+  searchParams: { connected?: string; period?: string };
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
@@ -78,17 +80,55 @@ export default async function Dashboard({
     );
   }
 
+  const periodKey: PeriodKey = isPeriodKey(searchParams.period) ? searchParams.period : "30d";
+  const { start, end } = periodRange(periodKey);
+
   const [orders, listings] = await Promise.all([
     prisma.order.findMany({
-      where: { shopId: shop.id },
+      where: {
+        shopId: shop.id,
+        ...(start ? { orderDate: { gte: start, lte: end } } : {}),
+      },
       orderBy: { orderDate: "desc" },
-      take: 20,
-      include: { lineItems: true },
+      include: { lineItems: { include: { listing: true } } },
     }),
     prisma.listing.findMany({ where: { shopId: shop.id } }),
   ]);
 
   const listingsMissingCogs = listings.filter((l) => l.cogsAmount === null).length;
+
+  // Cast once here (Prisma's generated type already matches OrderWithItems;
+  // this is just the Decimal→number boundary the rest of this file assumes).
+  const ordersWithItems = orders as unknown as OrderWithItems[];
+  const dayGroups = groupOrdersByDay(ordersWithItems);
+  const products = aggregateByListing(ordersWithItems);
+
+  function toOrderRowItems(order: OrderWithItems): OrderRowItem[] {
+    return order.lineItems.map((li) => ({ title: li.listing.title, quantity: li.quantity }));
+  }
+
+  function toDayOrder(order: OrderWithItems): DayOrder {
+    const { totalFees, netProfit } = orderCogsFees(order);
+    let profitLabel: string;
+    if (netProfit !== null) {
+      profitLabel = `${netProfit >= 0 ? "+" : ""}${formatMoney(netProfit, order.currency)}`;
+    } else if (totalFees === null) {
+      profitLabel = "fees pending — sync again";
+    } else {
+      profitLabel = "add cost to see profit";
+    }
+    return {
+      id: order.id,
+      receiptId: order.etsyReceiptId.toString(),
+      orderDate: order.orderDate,
+      items: toOrderRowItems(order),
+      grossAmount: Number(order.grossAmount),
+      currency: order.currency,
+      feesBreakdown: order.feesBreakdown as DayOrder["feesBreakdown"],
+      netProfit,
+      profitLabel,
+    };
+  }
 
   return (
     <>
@@ -137,53 +177,39 @@ export default async function Dashboard({
           </div>
         )}
 
+        <div style={{ marginBottom: 20 }}>
+          <PeriodPicker active={periodKey} />
+        </div>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h2 style={{ fontSize: "1.05rem" }}>Recent orders</h2>
+          <h2 style={{ fontSize: "1.05rem" }}>Orders</h2>
           {orders.length > 0 && (
             <a href="/api/export/csv" className="button" style={{ fontSize: "0.85rem" }}>
               Export CSV
             </a>
           )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders synced yet.</p>}
-          {orders.map((order) => {
-            const cogsProfits = order.lineItems.map((li) => li.lineProfit);
-            const cogsKnown = cogsProfits.length > 0 && cogsProfits.every((p) => p !== null);
-            const cogsProfit = cogsKnown ? cogsProfits.reduce((sum, p) => sum + Number(p), 0) : null;
-
-            // feesBreakdown is a FeeEngineBreakdown (see schema.prisma) once
-            // sync.ts has resolved sellerCountry/currency for this order —
-            // {} until then, so totalFees stays null rather than assumed 0.
-            // Passed whole (not just totalFees) to OrderRow so it can render
-            // the full Sellerboard-style fee-by-fee breakdown on demand.
-            const feesBreakdown = order.feesBreakdown as Partial<FeeEngineBreakdown> | null;
-            const totalFees = typeof feesBreakdown?.totalFees === "number" ? feesBreakdown.totalFees : null;
-
-            const netProfit = cogsProfit !== null && totalFees !== null ? cogsProfit - totalFees : null;
-
-            let profitLabel: string;
-            if (netProfit !== null) {
-              profitLabel = `${netProfit >= 0 ? "+" : ""}${formatMoney(netProfit, order.currency)}`;
-            } else if (totalFees === null) {
-              profitLabel = "fees pending — sync again";
-            } else {
-              profitLabel = "add cost to see profit";
-            }
-
-            return (
-              <OrderRow
-                key={order.id}
-                orderDate={order.orderDate}
-                grossAmount={Number(order.grossAmount)}
-                currency={order.currency}
-                feesBreakdown={feesBreakdown}
-                netProfit={netProfit}
-                profitLabel={profitLabel}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
+          {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders in this period.</p>}
+          {dayGroups.map((day) =>
+            day.orders.length === 1 ? (
+              <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} />
+            ) : (
+              <DayGroup
+                key={day.dateKey}
+                dateLabel={day.dateLabel}
+                orders={day.orders.map(toDayOrder)}
+                grossTotal={day.grossTotal}
+                feesTotal={day.feesTotal}
+                netProfit={day.netProfit}
+                currency={day.currency}
               />
-            );
-          })}
+            )
+          )}
         </div>
+
+        <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>Products</h2>
+        <ProductsTable products={products} />
       </main>
     </>
   );

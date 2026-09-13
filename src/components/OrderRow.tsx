@@ -4,22 +4,32 @@ import { useState } from "react";
 import { formatMoney, formatPercent } from "@/lib/money";
 import type { FeeEngineBreakdown } from "@/lib/feeEngine";
 
-// Sellerboard-style fee detail: every order can expand to show exactly which
-// Etsy fee lines made up its total, not just the total itself. Reads
-// straight off feesBreakdown (computeOrderFees's real output) — nothing here
-// is a separate estimate, so it can never drift from what the summary line
-// shows. Optional lines (gift wrap, multi-quantity, Offsite Ads, currency
+export interface OrderRowItem {
+  title: string;
+  quantity: number;
+}
+
+// Sellerboard-style order detail: every order shows its order number and
+// what was actually sold, and can expand to show exactly which Etsy fee
+// lines made up its total (not just the total itself). Fee figures read
+// straight off feesBreakdown (computeOrderFees's real output) — nothing
+// here is a separate estimate, so it can never drift from the summary line.
+// Optional fee lines (gift wrap, multi-quantity, Offsite Ads, currency
 // conversion, Regulatory Operating Fee, VAT) are hidden when they're zero,
 // so an order with none of those isn't cluttered with a wall of "€0.00"s.
 export function OrderRow({
+  receiptId,
   orderDate,
+  items,
   grossAmount,
   currency,
   feesBreakdown,
   netProfit,
   profitLabel,
 }: {
+  receiptId: string;
   orderDate: Date;
+  items: OrderRowItem[];
   grossAmount: number;
   currency: string | null;
   feesBreakdown: Partial<FeeEngineBreakdown> | null;
@@ -78,10 +88,15 @@ export function OrderRow({
       });
   }
 
+  const itemsSummary = items.map((i) => (i.quantity > 1 ? `${i.title} ×${i.quantity}` : i.title)).join(", ");
+
   return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span>{orderDate.toLocaleDateString()}</span>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span>{orderDate.toLocaleDateString()}</span>
+          <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Order #{receiptId}</span>
+        </div>
         <span>{money(grossAmount)}</span>
         {hasFees && (
           <button
@@ -115,6 +130,10 @@ export function OrderRow({
           {profitLabel}
         </span>
       </div>
+
+      {itemsSummary && (
+        <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>{itemsSummary}</div>
+      )}
 
       {expanded && hasFees && (
         <div
