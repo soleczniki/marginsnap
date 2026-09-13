@@ -1,6 +1,13 @@
 import { prisma } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/crypto";
-import { listActiveListings, listReceiptsSince, refreshAccessToken } from "@/lib/etsy";
+import {
+  extractUserIdFromAccessToken,
+  getShopForUser,
+  listActiveListings,
+  listReceiptsSince,
+  refreshAccessToken,
+} from "@/lib/etsy";
+import { computeOrderFees, type FeeEngineLineItem } from "@/lib/feeEngine";
 import type { Shop } from "@prisma/client";
 
 // Shared sync logic — pulls one shop's listings + orders from Etsy and writes
@@ -19,9 +26,24 @@ import type { Shop } from "@prisma/client";
 //   100x (a real €3.00 order showed as $300).
 // - receipt.fees does not exist on the real response at all (not even as
 //   an empty object) — the old `receipt.fees ?? {}` always silently landed
-//   on the `?? {}` fallback. Real fee figures should come from
-//   feeEngine.ts's computeOrderFees() instead — see the TODO below for the
-//   one open gap (seller country / VAT status aren't stored anywhere yet).
+//   on the `?? {}` fallback. Real fee figures now come from feeEngine.ts's
+//   computeOrderFees() — see below for how its inputs are sourced per shop.
+//
+// Fee-engine inputs (per shop, never hardcoded — every connected shop can be
+// a different seller in a different country with a different VAT status):
+// - sellerCountry: pulled fresh from Etsy's shop_location_country_iso on
+//   every sync (confirmed as a real Shop-resource field — see the field
+//   list at https://raw.githubusercontent.com/gordonturner/etsy-open-api-client/main/docs/Shop.md).
+// - sellerHasValidVatId: Etsy's API has no field for this anywhere — it's
+//   the one input each seller sets themselves, on /dashboard/settings.
+// - Offsite Ads attribution isn't present on the receipt/transaction
+//   objects either, so offsiteAdsAttributed is always false for now — that
+//   fee line is 0 until Etsy exposes it or we find another source for it.
+//
+// grossAmount/shippingCost/feesBreakdown are recomputed on every sync (not
+// just on first insert) — nothing on Order is seller-edited, so there's no
+// user input to protect by leaving it alone. That also means re-syncing
+// after this fix corrects any order synced before it, automatically.
 
 function money(m: { amount: number; divisor: number } | null | undefined): number {
   if (!m || !m.divisor) return 0;
@@ -46,6 +68,26 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   }
 
   if (!shop.etsyShopId) throw new Error("shop has no etsyShopId on record");
+
+  // ---------- Seller country (fee engine input #1) ----------
+  // Refetched every sync, not cached forever — a seller could move, and this
+  // is cheap (one call, already-open connection). Falls back to whatever's
+  // already stored if this call doesn't return one, rather than clobbering
+  // a known-good value with null.
+  //
+  // shop_location_country_iso is a real field (confirmed against a live
+  // response via scripts/diag-shop-route.ts on 2026-09-13) but can genuinely
+  // be null — this shop never filled that setting in. shipping_from_country_iso
+  // was populated on the same real shop, so it's the fallback: still a real
+  // Etsy-reported field per shop, never a hardcoded guess.
+  const etsyUserId = extractUserIdFromAccessToken(accessToken);
+  const shopInfo = await getShopForUser(accessToken, etsyUserId);
+  const shopRecord = shopInfo?.shop_id ? shopInfo : shopInfo?.results?.[0];
+  const sellerCountry: string | null =
+    shopRecord?.shop_location_country_iso ?? shopRecord?.shipping_from_country_iso ?? shop.sellerCountry ?? null;
+  if (sellerCountry && sellerCountry !== shop.sellerCountry) {
+    await prisma.shop.update({ where: { id: shop.id }, data: { sellerCountry } });
+  }
 
   // ---------- Listings ----------
   // (Previously missing entirely — without this, no order line item could
@@ -77,47 +119,99 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   let ordersSynced = 0;
 
   for (const receipt of receipts?.results ?? []) {
+    const shippingCost = money(receipt.total_shipping_cost);
+    const grossAmount = money(receipt.grandtotal);
+
     const order = await prisma.order.upsert({
       where: { shopId_etsyReceiptId: { shopId: shop.id, etsyReceiptId: BigInt(receipt.receipt_id) } },
       create: {
         shopId: shop.id,
         etsyReceiptId: BigInt(receipt.receipt_id),
         orderDate: new Date(receipt.created_timestamp * 1000),
-        grossAmount: money(receipt.grandtotal),
-        // TODO(fee engine wiring): feeEngine.ts's computeOrderFees() needs
-        // sellerCountry + sellerHasValidVatId, and neither is stored on Shop
-        // yet — see PROJECT.md. Left as {} rather than a guessed country
-        // until that's decided; do not read this as "no fees" in the UI.
-        feesBreakdown: {},
-        shippingCost: money(receipt.total_shipping_cost),
+        grossAmount,
+        feesBreakdown: {}, // filled in below once resolvedItems/fee input are known
+        shippingCost,
       },
-      update: {}, // orders are immutable once synced; only line-item profit recalculates
+      update: { grossAmount, shippingCost }, // see file header — recomputed every sync, nothing here is seller-edited
     });
+
+    // Resolve each transaction's listing/cost context once, reused for both
+    // the fee-engine input and the per-line-item upserts below.
+    const resolvedItems: Array<{
+      transaction: (typeof receipt.transactions)[number];
+      listing: NonNullable<Awaited<ReturnType<typeof prisma.listing.findUnique>>>;
+      cogs: number | null;
+      unitPrice: number;
+    }> = [];
 
     for (const transaction of receipt.transactions ?? []) {
       const listing = await prisma.listing.findUnique({
         where: { shopId_etsyListingId: { shopId: shop.id, etsyListingId: BigInt(transaction.listing_id) } },
       });
+      if (!listing) continue; // no matching listing synced — same as before, this line item is skipped
 
-      const cogs = listing?.cogsAmount ? Number(listing.cogsAmount) : null;
-      const unitPrice = money(transaction.price);
-      const lineProfit = cogs !== null ? unitPrice - cogs : null; // fee/shipping share TODO
+      resolvedItems.push({ transaction, listing, cogs: listing.cogsAmount ? Number(listing.cogsAmount) : null, unitPrice: money(transaction.price) });
+    }
 
-      if (listing) {
-        await prisma.orderLineItem.upsert({
-          where: { id: `${order.id}:${listing.id}` }, // placeholder composite — see file header note in cron route
-          create: {
-            id: `${order.id}:${listing.id}`,
-            orderId: order.id,
-            listingId: listing.id,
-            quantity: transaction.quantity ?? 1,
-            unitPrice,
-            cogsAtSale: cogs,
-            lineProfit,
-          },
-          update: { cogsAtSale: cogs, lineProfit },
+    // ---------- Real fee computation (feeEngine.ts) ----------
+    // Every real Money object Etsy returns carries currency_code (confirmed
+    // against a live receipt — see file header), so no fallback currency is
+    // assumed here: if it's ever actually missing, fees are skipped for this
+    // order rather than guessed at.
+    const currency = receipt.grandtotal?.currency_code ?? null;
+    if (sellerCountry && currency) {
+      const lineItems: FeeEngineLineItem[] = [];
+      for (const { transaction, listing, unitPrice } of resolvedItems) {
+        // "First unit ever sold on this listing" = no other order's line item
+        // for this listing exists yet (excluding this order itself, so a
+        // re-sync of the same order doesn't count its own prior run).
+        const priorSaleCount = await prisma.orderLineItem.count({
+          where: { listingId: listing.id, orderId: { not: order.id } },
+        });
+        lineItems.push({
+          listingId: listing.id,
+          quantity: transaction.quantity ?? 1,
+          unitPrice,
+          isFirstUnitSoldOnListing: priorSaleCount === 0,
         });
       }
+
+      const feesBreakdown = computeOrderFees({
+        currency,
+        lineItems,
+        shippingCharged: shippingCost,
+        giftWrapCharged: money(receipt.gift_wrap_price),
+        sellerCountry,
+        sellerHasValidVatId: shop.sellerHasValidVatId,
+        // Offsite Ads attribution isn't on the receipt/transaction objects —
+        // see file header. Always "not attributed" until that data exists.
+        offsiteAdsAttributed: false,
+      });
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { feesBreakdown: feesBreakdown as unknown as object },
+      });
+    }
+    // else: sellerCountry never resolved, or this receipt had no currency —
+    // feesBreakdown stays {} until a future sync has both.
+
+    for (const { transaction, listing, cogs, unitPrice } of resolvedItems) {
+      const lineProfit = cogs !== null ? unitPrice - cogs : null; // fee/shipping share TODO
+
+      await prisma.orderLineItem.upsert({
+        where: { id: `${order.id}:${listing.id}` }, // placeholder composite — see file header note in cron route
+        create: {
+          id: `${order.id}:${listing.id}`,
+          orderId: order.id,
+          listingId: listing.id,
+          quantity: transaction.quantity ?? 1,
+          unitPrice,
+          cogsAtSale: cogs,
+          lineProfit,
+        },
+        update: { cogsAtSale: cogs, lineProfit },
+      });
     }
     ordersSynced++;
   }
