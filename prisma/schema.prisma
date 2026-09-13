@@ -83,6 +83,21 @@ model Shop {
   etsyShopId  BigInt?
   shopName    String?
 
+  // Fee-engine inputs (feeEngine.ts computeOrderFees) — per-shop, since every
+  // connected shop can be a different seller in a different country.
+  //
+  // sellerCountry: ISO 3166-1 alpha-2, pulled from Etsy's own
+  // shop_location_country_iso every sync (syncShop) — never entered by hand,
+  // never assumed. Null until the first successful sync.
+  sellerCountry String?
+  // sellerHasValidVatId: Etsy's API has no field for this anywhere (checked
+  // the full Shop resource — nothing tax/VAT-related is exposed), so it's the
+  // one fee-engine input each seller sets themselves, on /dashboard/settings.
+  // Defaults to false (the conservative assumption — this slightly overstates
+  // fees rather than understates profit for a seller who has a VAT ID but
+  // hasn't told us yet).
+  sellerHasValidVatId Boolean @default(false)
+
   // Encrypted at rest by the app layer before being written here — never store plaintext tokens.
   accessTokenEnc  String? @db.Text
   refreshTokenEnc String? @db.Text
@@ -123,7 +138,12 @@ model Order {
   etsyReceiptId  BigInt
   orderDate      DateTime
   grossAmount    Decimal  @db.Decimal(10, 2)
-  feesBreakdown  Json     // { transactionFee, paymentProcessingFee, listingFeeShare, offsiteAdsFee, ... }
+  // A FeeEngineBreakdown from feeEngine.ts's computeOrderFees() — itemTotal,
+  // shippingTotal, transactionFee, paymentProcessingFee, multiQuantityFee,
+  // offsiteAdsFee, currencyConversionFee, regulatoryOperatingFee, vatOnFees,
+  // totalFees, netToSeller, ratesUsed. {} when the shop's sellerCountry
+  // hasn't synced yet (see syncShop).
+  feesBreakdown  Json
   shippingCost   Decimal  @db.Decimal(10, 2) @default(0)
   createdAt      DateTime @default(now())
 

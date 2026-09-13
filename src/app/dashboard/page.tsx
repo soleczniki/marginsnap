@@ -47,6 +47,9 @@ export default async function Dashboard({
         >
           {isSubscribed ? "Manage billing" : "Upgrade (currently free)"}
         </a>
+        <a href="/dashboard/settings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Settings
+        </a>
         <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Sign out
         </a>
