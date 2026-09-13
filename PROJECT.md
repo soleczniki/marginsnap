@@ -19,25 +19,28 @@ MarginSnap's edge is answering the one question those tools bury.
 
 ## Roadmap / end goal (2026-09-13)
 
-Bogdan's own framing: something in the shape of **Sellerboard**, but scoped
-down to profitability only (not full accounting) — connect your shop, see
-real profit per order and per product, filter by period. The current
-dashboard (a plain list of recent orders) is intentionally minimal so far,
-not the finished picture — it looked "empty" compared to that, correctly.
+The end goal: a Sellerboard-style profitability dashboard for solo Etsy
+sellers — pick a period, see real fee-aware profit per order and per
+listing, at a glance, with zero spreadsheet setup. Three phases, in order:
 
-Three phases, in order, and deliberately in this order — no point building
-a nicer UI on numbers that aren't verified yet:
-
-1. **Fee correctness** (current phase) — real Etsy data instead of
-   assumptions, real per-shop fees instead of a stub. See "Current status"
-   below for exactly what's been found and fixed so far.
-2. **The actual dashboard** — a date-range/period picker, and a per-listing
-   profitability table (not just a list of individual orders) — this is the
-   Sellerboard-shaped layer. Not started yet.
-3. **Etsy Commercial Access** — required before any seller besides Bogdan
-   can connect a shop (see "Etsy API access" below). Can run in parallel
-   with 1 and 2 since it's a slow manual review with no published SLA, but
-   should go in soon since it's the long pole, not a last step.
+1. **Fee correctness (current work).** Nothing else matters if the numbers
+   are wrong. This phase is: real Etsy data confirmed field-by-field (not
+   assumed from docs), `feeEngine.ts` built and tested, wired into `sync.ts`
+   with real per-shop inputs (`sellerCountry` auto-synced, VAT status
+   user-set), and the dashboard actually displaying the right currency and
+   the right numbers instead of placeholder/hardcoded values. Nearly done —
+   see "Current status" below for what's left.
+2. **Sellerboard-style dashboard.** Once fees are trustworthy: a date-range
+   / period picker (this week, this month, custom range) and a per-listing
+   profitability table (not just per-order), so a seller can see which
+   products are actually worth making. This is the "current version looks
+   empty" gap — v1 today shows a flat recent-orders list, not the
+   at-a-glance profitability view that's the actual product.
+3. **Etsy Commercial Access.** Required before any seller other than
+   Bogdan's own connected shop can use this — see "Etsy API access — path
+   forward" below. Separate track, not yet actioned, should be started in
+   parallel rather than left until phases 1–2 are done, since manual review
+   time is the long pole.
 
 ## Architecture: API-first, adapter-shaped
 
@@ -120,44 +123,49 @@ anywhere. Resolved as:
   route (`scripts/diag-shop-route.ts`) that dumped the real Shop object.
   Fixed by falling back to `shipping_from_country_iso` (also a real,
   per-shop Etsy field, populated on the same shop) when the location field
-  is null.
+  is null. Confirmed working end-to-end — the settings page now shows the
+  shop's real country.
 - `sellerHasValidVatId`: Etsy's API has **no field for this anywhere** —
   checked the full Shop resource schema, nothing tax/VAT-related exists.
   This is the one fee-engine input each seller sets themselves, per shop, on
-  the new `/dashboard/settings` page (`Shop.sellerHasValidVatId`, defaults to
+  the `/dashboard/settings` page (`Shop.sellerHasValidVatId`, defaults to
   `false` — the conservative default, since it overstates fees slightly
   rather than understates them for a seller who has a VAT ID but hasn't told
   us yet).
 - Offsite Ads attribution isn't present on the receipt/transaction objects
   either — `offsiteAdsAttributed` is always `false` for now, so that fee
   line is always 0 until a data source for it turns up.
-- **Migration run and deployed** (`Shop.sellerCountry`, `Shop.sellerHasValidVatId`
-  both live). Settings page shows the country as a full name via
-  `Intl.DisplayNames` (not a hand-maintained country list) instead of the
-  raw ISO code.
-- `Order.currency` added (ISO 4217, from the real receipt — never assumed):
-  the dashboard previously showed every amount with a hardcoded `$`, wrong
-  for this EUR shop. Order rows now format via `Intl.NumberFormat` with the
-  order's real currency, and show total fees + a real fee-aware profit
-  (gross − fees − COGS) instead of only a COGS-based number.
-- **Incident, 2026-09-13**: right after the `sellerCountry` fix was pushed,
-  `src/lib/sync.ts` reverted to an older, pre-fee-engine version on disk
-  before the next `git commit` — so that commit shipped the old file
-  despite the push succeeding. Likely cause: an editor (Notepad++ — see
-  the `nppBackup` folder in this project) had a stale buffer open and
-  saved over it. Caught via `git diff` before the second push went out;
-  no bad state reached `main`. Worth keeping files this session is
-  actively editing closed elsewhere until a push is confirmed.
+- Country display: the settings page shows the full country name (e.g.
+  "Lithuania"), not the raw ISO code, via `Intl.DisplayNames` — no
+  hand-maintained country-name table, so every ISO code Etsy could ever send
+  back displays correctly, not just the ones seen so far.
+- Migration (`add_fee_engine_fields`, adding `Shop.sellerCountry` and
+  `Shop.sellerHasValidVatId`) has been run and deployed.
 
-**Fee engine** (`src/lib/feeEngine.ts` + `src/lib/feeEngine.test.ts`): built
-and tested as a pure function, independent of live API access. 9/9 tests
-passing — run with `npx tsx --test src/lib/feeEngine.test.ts`. Covers:
-transaction fee, payment processing (by country), the multi-quantity fee,
-Offsite Ads (both rates + the $10k/365-day threshold + the $100 cap),
-currency conversion, the Regulatory Operating Fee (by country), and VAT on
-fees (EU/UK, registered-vs-unregistered). Every rate is cited to an Etsy
-source in the file header; `FEES_AS_OF` marks when they were last checked —
-re-verify before trusting them long-term, Etsy revises these periodically.
+**Currency correctness** (2026-09-13): the dashboard was displaying every
+amount with a hardcoded `$`, regardless of the shop's real currency (this
+shop's is EUR) — found while trying to visually verify the fee-engine work
+above. Fixed by adding `Order.currency` (real ISO 4217 code, from the
+receipt's own `currency_code`, never assumed) and a `formatMoney()` helper
+using `Intl.NumberFormat`, so every currency Etsy could report displays with
+its correct symbol/formatting — no hand-picked symbol table. Migration
+(`add_order_currency`) and this batch of changes were ready to deploy as of
+this writing — confirm in git history whether `git push` for this batch
+completed.
+
+**File-revert incident (2026-09-13)** — noting this so it doesn't repeat
+silently: twice this session, a file (`src/lib/sync.ts`, then this file
+itself, `PROJECT.md`) got silently overwritten back to an older version on
+disk — after being written and confirmed saved — before `git add`/commit
+ran, so the wrong (older) content nearly got committed despite the working
+tree otherwise looking clean. Suspected cause: a stale editor buffer (e.g.
+Notepad++, which has a local backup folder in this project) re-saving over
+the file. No bad state reached `main` in either case — caught by re-checking
+the file's actual content immediately after every write, and by running
+`git status` / `git diff` (not just `git add` blindly) before every commit.
+**Close the file in any local editor before running git commands** — this
+is the fix on Bogdan's end; re-verifying immediately after every write is
+the fix on the assistant's end.
 
 Known simplifications, documented in the code, not yet product decisions:
 - Multi-quantity billing state (which unit is "the first sold" on a
@@ -174,6 +182,16 @@ Known simplifications, documented in the code, not yet product decisions:
   share of order-level fees/shipping — it's `unitPrice - cogsAtSale` only.
   Order-level `netToSeller` (in `feesBreakdown`) is the real fee-aware
   number; per-line profit allocation is separate, later work.
+
+**Fee engine** (`src/lib/feeEngine.ts` + `src/lib/feeEngine.test.ts`): built
+and tested as a pure function, independent of live API access. 9/9 tests
+passing — run with `npx tsx --test src/lib/feeEngine.test.ts`. Covers:
+transaction fee, payment processing (by country), the multi-quantity fee,
+Offsite Ads (both rates + the $10k/365-day threshold + the $100 cap),
+currency conversion, the Regulatory Operating Fee (by country), and VAT on
+fees (EU/UK, registered-vs-unregistered). Every rate is cited to an Etsy
+source in the file header; `FEES_AS_OF` marks when they were last checked —
+re-verify before trusting them long-term, Etsy revises these periodically.
 
 **Etsy API access**: a Personal App is registered and working (real OAuth
 connect + real data confirmed above). Commercial Access (needed before this
