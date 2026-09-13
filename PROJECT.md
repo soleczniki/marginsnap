@@ -89,10 +89,16 @@ re-syncing after this fix auto-corrects any order that synced before it.
 other sellers" positioning, not just Bogdan's own shop): `computeOrderFees()`
 needs `sellerCountry` and `sellerHasValidVatId`, and neither was stored
 anywhere. Resolved as:
-- `sellerCountry`: pulled automatically from Etsy's `shop_location_country_iso`
-  (a real field on the Shop resource) on **every sync**, stored per-shop on
+- `sellerCountry`: pulled automatically on **every sync**, stored per-shop on
   `Shop.sellerCountry`. Never entered by hand, never hardcoded — each
-  connected shop gets its own.
+  connected shop gets its own. First attempt used `shop_location_country_iso`
+  alone; a real shop had that field present but genuinely `null` (never
+  filled in that setting), so it stayed unsynced through several manual
+  "Sync now" clicks with no error — confirmed via a temporary diagnostic
+  route (`scripts/diag-shop-route.ts`) that dumped the real Shop object.
+  Fixed by falling back to `shipping_from_country_iso` (also a real,
+  per-shop Etsy field, populated on the same shop) when the location field
+  is null.
 - `sellerHasValidVatId`: Etsy's API has **no field for this anywhere** —
   checked the full Shop resource schema, nothing tax/VAT-related exists.
   This is the one fee-engine input each seller sets themselves, per shop, on
