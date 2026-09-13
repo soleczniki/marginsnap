@@ -121,6 +121,9 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   for (const receipt of receipts?.results ?? []) {
     const shippingCost = money(receipt.total_shipping_cost);
     const grossAmount = money(receipt.grandtotal);
+    // Real ISO 4217 code from the receipt itself — never assumed/hardcoded,
+    // since a shop's orders could in principle span currencies.
+    const currency: string | null = receipt.grandtotal?.currency_code ?? null;
 
     const order = await prisma.order.upsert({
       where: { shopId_etsyReceiptId: { shopId: shop.id, etsyReceiptId: BigInt(receipt.receipt_id) } },
@@ -129,10 +132,11 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
         etsyReceiptId: BigInt(receipt.receipt_id),
         orderDate: new Date(receipt.created_timestamp * 1000),
         grossAmount,
+        currency,
         feesBreakdown: {}, // filled in below once resolvedItems/fee input are known
         shippingCost,
       },
-      update: { grossAmount, shippingCost }, // see file header — recomputed every sync, nothing here is seller-edited
+      update: { grossAmount, currency, shippingCost }, // see file header — recomputed every sync, nothing here is seller-edited
     });
 
     // Resolve each transaction's listing/cost context once, reused for both
@@ -154,11 +158,9 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
     }
 
     // ---------- Real fee computation (feeEngine.ts) ----------
-    // Every real Money object Etsy returns carries currency_code (confirmed
-    // against a live receipt — see file header), so no fallback currency is
-    // assumed here: if it's ever actually missing, fees are skipped for this
-    // order rather than guessed at.
-    const currency = receipt.grandtotal?.currency_code ?? null;
+    // `currency` computed above, alongside grossAmount/shippingCost — if it's
+    // ever actually missing, fees are skipped for this order rather than
+    // guessed at (see file header: every real Money object carries it).
     if (sellerCountry && currency) {
       const lineItems: FeeEngineLineItem[] = [];
       for (const { transaction, listing, unitPrice } of resolvedItems) {

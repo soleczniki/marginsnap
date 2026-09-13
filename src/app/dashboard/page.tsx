@@ -4,6 +4,19 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SyncButton } from "@/components/SyncButton";
 
+// Formats an amount in its order's real currency (Intl.NumberFormat, not a
+// hand-picked symbol table — every currency Etsy could report is covered).
+// `currency` is null only for rows synced before that column existed; shown
+// as a bare number rather than assuming a currency for them.
+function formatMoney(amount: number, currency: string | null): string {
+  if (!currency) return amount.toFixed(2);
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`;
+  }
+}
+
 // V1 of the dashboard (Blueprint workflow §4). Deliberately minimal —
 // per-listing COGS entry (workflow §2) and CSV export are Phase 3 work, not
 // this scaffold. The point here is: does a connected shop's real data render
@@ -145,19 +158,42 @@ export default async function Dashboard({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders synced yet.</p>}
           {orders.map((order) => {
-            const profits = order.lineItems.map((li) => li.lineProfit);
-            const knownProfit = profits.length > 0 && profits.every((p) => p !== null);
-            const total = knownProfit ? profits.reduce((sum, p) => sum + Number(p), 0) : null;
+            const cogsProfits = order.lineItems.map((li) => li.lineProfit);
+            const cogsKnown = cogsProfits.length > 0 && cogsProfits.every((p) => p !== null);
+            const cogsProfit = cogsKnown ? cogsProfits.reduce((sum, p) => sum + Number(p), 0) : null;
+
+            // feesBreakdown is a FeeEngineBreakdown (see schema.prisma) once
+            // sync.ts has resolved sellerCountry/currency for this order —
+            // {} until then, so totalFees stays null rather than assumed 0.
+            const feesBreakdown = order.feesBreakdown as { totalFees?: number } | null;
+            const totalFees = typeof feesBreakdown?.totalFees === "number" ? feesBreakdown.totalFees : null;
+
+            const netProfit = cogsProfit !== null && totalFees !== null ? cogsProfit - totalFees : null;
+
+            let profitLabel: string;
+            if (netProfit !== null) {
+              profitLabel = `${netProfit >= 0 ? "+" : ""}${formatMoney(netProfit, order.currency)}`;
+            } else if (totalFees === null) {
+              profitLabel = "fees pending — sync again";
+            } else {
+              profitLabel = "add cost to see profit";
+            }
+
             return (
               <div
                 key={order.id}
                 className="card"
-                style={{ display: "flex", justifyContent: "space-between" }}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}
               >
                 <span>{order.orderDate.toLocaleDateString()}</span>
-                <span>${Number(order.grossAmount).toFixed(2)}</span>
-                <span className={total !== null ? (total >= 0 ? "profit-positive" : "profit-negative") : ""}>
-                  {total !== null ? `${total >= 0 ? "+" : ""}$${total.toFixed(2)}` : "add cost to see profit"}
+                <span>{formatMoney(Number(order.grossAmount), order.currency)}</span>
+                {totalFees !== null && (
+                  <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
+                    fees: {formatMoney(totalFees, order.currency)}
+                  </span>
+                )}
+                <span className={netProfit !== null ? (netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>
+                  {profitLabel}
                 </span>
               </div>
             );

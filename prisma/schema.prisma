@@ -138,6 +138,10 @@ model Order {
   etsyReceiptId  BigInt
   orderDate      DateTime
   grossAmount    Decimal  @db.Decimal(10, 2)
+  // ISO 4217, from the real receipt's currency_code (e.g. "EUR", "USD") —
+  // never assumed. Nullable only for rows synced before this field existed;
+  // the dashboard falls back to a neutral display when it's null.
+  currency       String?
   // A FeeEngineBreakdown from feeEngine.ts's computeOrderFees() — itemTotal,
   // shippingTotal, transactionFee, paymentProcessingFee, multiQuantityFee,
   // offsiteAdsFee, currencyConversionFee, regulatoryOperatingFee, vatOnFees,

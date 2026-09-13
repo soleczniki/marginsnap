@@ -4,6 +4,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
 
+// ISO 3166-1 alpha-2 → full name, via the JS runtime's own locale data
+// (Intl.DisplayNames) rather than a hand-maintained country list — covers
+// every code Etsy could ever send back, not just the ones seen so far.
+function countryName(iso: string): string {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(iso) ?? iso;
+  } catch {
+    return iso; // an unrecognized/malformed code — show it raw rather than crash the page
+  }
+}
+
 // Fee-engine settings (feeEngine.ts / src/lib/sync.ts). Deliberately just one
 // input here: sellerCountry is synced automatically from Etsy on every sync
 // and shown read-only for transparency; sellerHasValidVatId is the one thing
@@ -46,7 +57,7 @@ export default async function Settings() {
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Shop country</div>
           <div style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: 4 }}>
             {shop.sellerCountry
-              ? `${shop.sellerCountry} — synced automatically from Etsy on every sync.`
+              ? `${countryName(shop.sellerCountry)} — synced automatically from Etsy on every sync.`
               : "Not synced yet — click \"Sync now\" on the dashboard."}
           </div>
         </div>

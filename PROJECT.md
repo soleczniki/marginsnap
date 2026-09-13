@@ -17,6 +17,28 @@ Inventora) lose because they're spreadsheet-shaped and built for bigger
 operations — more setup, more fields, more screens than a solo seller wants.
 MarginSnap's edge is answering the one question those tools bury.
 
+## Roadmap / end goal (2026-09-13)
+
+Bogdan's own framing: something in the shape of **Sellerboard**, but scoped
+down to profitability only (not full accounting) — connect your shop, see
+real profit per order and per product, filter by period. The current
+dashboard (a plain list of recent orders) is intentionally minimal so far,
+not the finished picture — it looked "empty" compared to that, correctly.
+
+Three phases, in order, and deliberately in this order — no point building
+a nicer UI on numbers that aren't verified yet:
+
+1. **Fee correctness** (current phase) — real Etsy data instead of
+   assumptions, real per-shop fees instead of a stub. See "Current status"
+   below for exactly what's been found and fixed so far.
+2. **The actual dashboard** — a date-range/period picker, and a per-listing
+   profitability table (not just a list of individual orders) — this is the
+   Sellerboard-shaped layer. Not started yet.
+3. **Etsy Commercial Access** — required before any seller besides Bogdan
+   can connect a shop (see "Etsy API access" below). Can run in parallel
+   with 1 and 2 since it's a slow manual review with no published SLA, but
+   should go in soon since it's the long pole, not a last step.
+
 ## Architecture: API-first, adapter-shaped
 
 The shipped product is API-based — a seller connects their Etsy account and
@@ -109,11 +131,23 @@ anywhere. Resolved as:
 - Offsite Ads attribution isn't present on the receipt/transaction objects
   either — `offsiteAdsAttributed` is always `false` for now, so that fee
   line is always 0 until a data source for it turns up.
-- **Still needs a Prisma migration run** (`npx prisma migrate dev --name
-  add_fee_engine_fields`) against the real DB before this deploys cleanly —
-  the schema changed (`prisma/schema.prisma`: `Shop.sellerCountry`,
-  `Shop.sellerHasValidVatId`) but no migration file exists yet as of this
-  writing.
+- **Migration run and deployed** (`Shop.sellerCountry`, `Shop.sellerHasValidVatId`
+  both live). Settings page shows the country as a full name via
+  `Intl.DisplayNames` (not a hand-maintained country list) instead of the
+  raw ISO code.
+- `Order.currency` added (ISO 4217, from the real receipt — never assumed):
+  the dashboard previously showed every amount with a hardcoded `$`, wrong
+  for this EUR shop. Order rows now format via `Intl.NumberFormat` with the
+  order's real currency, and show total fees + a real fee-aware profit
+  (gross − fees − COGS) instead of only a COGS-based number.
+- **Incident, 2026-09-13**: right after the `sellerCountry` fix was pushed,
+  `src/lib/sync.ts` reverted to an older, pre-fee-engine version on disk
+  before the next `git commit` — so that commit shipped the old file
+  despite the push succeeding. Likely cause: an editor (Notepad++ — see
+  the `nppBackup` folder in this project) had a stale buffer open and
+  saved over it. Caught via `git diff` before the second push went out;
+  no bad state reached `main`. Worth keeping files this session is
+  actively editing closed elsewhere until a push is confirmed.
 
 **Fee engine** (`src/lib/feeEngine.ts` + `src/lib/feeEngine.test.ts`): built
 and tested as a pure function, independent of live API access. 9/9 tests
