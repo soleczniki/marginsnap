@@ -86,17 +86,29 @@ export function OrderRow({
         {hasFees && (
           <button
             onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
               background: "none",
               border: "none",
               color: "var(--muted)",
               fontSize: "0.8rem",
               cursor: "pointer",
               padding: 0,
-              textDecoration: "underline",
             }}
           >
-            {expanded ? "Hide fees" : "Show fees"}
+            <span>fees: {money(feesBreakdown!.totalFees!)}</span>
+            <span
+              style={{
+                display: "inline-block",
+                transition: "transform 0.15s",
+                transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+              }}
+            >
+              ▾
+            </span>
           </button>
         )}
         <span className={netProfit !== null ? (netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>
