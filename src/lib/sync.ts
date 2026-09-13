@@ -111,9 +111,18 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   }
 
   // ---------- Orders / receipts ----------
-  const minCreated = shop.lastSyncedAt
-    ? Math.floor(shop.lastSyncedAt.getTime() / 1000)
-    : Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000); // first sync: 90-day backfill
+  // Always re-fetch a rolling 90-day window — NOT "only receipts created since
+  // the last sync". This isn't just about catching new orders: whenever the
+  // computation itself changes (a money-field fix, the fee engine going in,
+  // the currency field being added), already-synced orders need to be
+  // recomputed too, and the only way that happens is if this loop sees them
+  // again. Using shop.lastSyncedAt as the cursor silently froze every order
+  // at whatever values it got on its first sync — that's exactly the bug
+  // that showed up as an order stuck at $300/no currency no matter how many
+  // times "Sync now" was clicked, after the underlying fix had shipped.
+  // Order volume for a solo seller is small enough that re-fetching (and
+  // re-upserting) 90 days of receipts on every sync is cheap.
+  const minCreated = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
 
   const receipts = await listReceiptsSince(accessToken, shop.etsyShopId.toString(), minCreated);
   let ordersSynced = 0;
