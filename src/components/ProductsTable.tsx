@@ -20,6 +20,7 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
         let profitLabel: string;
         if (p.netProfit !== null) profitLabel = `${p.netProfit >= 0 ? "+" : ""}${money(p.netProfit)}`;
         else if (p.allocatedFees === null) profitLabel = "fees pending";
+        else if (p.shippingUnknown) profitLabel = "add shipping cost to see profit";
         else profitLabel = "add cost to see profit";
 
         return (
@@ -38,6 +39,9 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
               </span>
               <span>revenue: {money(p.grossRevenue)}</span>
               {p.allocatedFees !== null && <span>fees: {money(p.allocatedFees)}</span>}
+              {p.allocatedShipping !== null && p.allocatedShipping !== 0 && (
+                <span>shipping cost: {money(p.allocatedShipping)}</span>
+              )}
               {p.cogsTotal !== null && <span>cost: {money(p.cogsTotal)}</span>}
             </div>
           </div>

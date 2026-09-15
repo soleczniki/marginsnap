@@ -6,6 +6,7 @@ import { SyncButton } from "@/components/SyncButton";
 import { OrderRow, type OrderRowItem } from "@/components/OrderRow";
 import { DayGroup, type DayOrder } from "@/components/DayGroup";
 import { PeriodPicker } from "@/components/PeriodPicker";
+import { ShippingModeToggle } from "@/components/ShippingModeToggle";
 import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
 import { isPeriodKey, periodRange, type PeriodKey } from "@/lib/periods";
@@ -17,7 +18,7 @@ import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItem
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: { connected?: string; period?: string };
+  searchParams: { connected?: string; period?: string; shipping?: string };
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
@@ -83,6 +84,17 @@ export default async function Dashboard({
   const periodKey: PeriodKey = isPeriodKey(searchParams.period) ? searchParams.period : "30d";
   const { start, end } = periodRange(periodKey);
 
+  // Shipping mode: the dashboard's view-only quick toggle (ShippingModeToggle)
+  // can override the shop's stored default (Shop.assumeShippingNetZero) for
+  // just this render — never written back. `shippingOverride` stays exactly
+  // what's in the URL (or undefined) so PeriodPicker only carries it forward
+  // when the user actually chose one — see PeriodPicker.tsx.
+  const shippingOverride: "count" | "exclude" | undefined =
+    searchParams.shipping === "count" || searchParams.shipping === "exclude" ? searchParams.shipping : undefined;
+  const assumeNetZero: boolean =
+    shippingOverride === "exclude" ? true : shippingOverride === "count" ? false : shop.assumeShippingNetZero;
+  const shippingMode: "count" | "exclude" = assumeNetZero ? "exclude" : "count";
+
   const [orders, listings] = await Promise.all([
     prisma.order.findMany({
       where: {
@@ -100,20 +112,22 @@ export default async function Dashboard({
   // Cast once here (Prisma's generated type already matches OrderWithItems;
   // this is just the Decimal→number boundary the rest of this file assumes).
   const ordersWithItems = orders as unknown as OrderWithItems[];
-  const dayGroups = groupOrdersByDay(ordersWithItems);
-  const products = aggregateByListing(ordersWithItems);
+  const dayGroups = groupOrdersByDay(ordersWithItems, assumeNetZero);
+  const products = aggregateByListing(ordersWithItems, assumeNetZero);
 
   function toOrderRowItems(order: OrderWithItems): OrderRowItem[] {
     return order.lineItems.map((li) => ({ title: li.listing.title, quantity: li.quantity }));
   }
 
   function toDayOrder(order: OrderWithItems): DayOrder {
-    const { totalFees, netProfit } = orderCogsFees(order);
+    const { totalFees, netProfit, shippingUnknown } = orderCogsFees(order, assumeNetZero);
     let profitLabel: string;
     if (netProfit !== null) {
       profitLabel = `${netProfit >= 0 ? "+" : ""}${formatMoney(netProfit, order.currency)}`;
     } else if (totalFees === null) {
       profitLabel = "fees pending — sync again";
+    } else if (shippingUnknown) {
+      profitLabel = "add shipping cost to see profit";
     } else {
       profitLabel = "add cost to see profit";
     }
@@ -127,6 +141,7 @@ export default async function Dashboard({
       feesBreakdown: order.feesBreakdown as DayOrder["feesBreakdown"],
       netProfit,
       profitLabel,
+      shippingCostAtSale: order.shippingCostAtSale !== null ? Number(order.shippingCostAtSale) : null,
     };
   }
 
@@ -177,8 +192,11 @@ export default async function Dashboard({
           </div>
         )}
 
+        <div style={{ marginBottom: 12 }}>
+          <PeriodPicker active={periodKey} shipping={shippingOverride} />
+        </div>
         <div style={{ marginBottom: 20 }}>
-          <PeriodPicker active={periodKey} />
+          <ShippingModeToggle active={shippingMode} period={periodKey} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -193,7 +211,7 @@ export default async function Dashboard({
           {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders in this period.</p>}
           {dayGroups.map((day) =>
             day.orders.length === 1 ? (
-              <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} />
+              <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} assumeNetZero={assumeNetZero} />
             ) : (
               <DayGroup
                 key={day.dateKey}
@@ -203,6 +221,7 @@ export default async function Dashboard({
                 feesTotal={day.feesTotal}
                 netProfit={day.netProfit}
                 currency={day.currency}
+                assumeNetZero={assumeNetZero}
               />
             )
           )}

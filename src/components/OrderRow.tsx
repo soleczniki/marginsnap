@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatMoney, formatPercent } from "@/lib/money";
 import type { FeeEngineBreakdown } from "@/lib/feeEngine";
+import { ShippingCostEditor } from "@/components/ShippingCostEditor";
 
 export interface OrderRowItem {
   title: string;
@@ -18,6 +19,7 @@ export interface OrderRowItem {
 // conversion, Regulatory Operating Fee, VAT) are hidden when they're zero,
 // so an order with none of those isn't cluttered with a wall of "€0.00"s.
 export function OrderRow({
+  id,
   receiptId,
   orderDate,
   items,
@@ -26,7 +28,10 @@ export function OrderRow({
   feesBreakdown,
   netProfit,
   profitLabel,
+  shippingCostAtSale,
+  assumeNetZero,
 }: {
+  id: string;
   receiptId: string;
   orderDate: Date;
   items: OrderRowItem[];
@@ -35,6 +40,13 @@ export function OrderRow({
   feesBreakdown: Partial<FeeEngineBreakdown> | null;
   netProfit: number | null;
   profitLabel: string;
+  /** The seller's real postage cost for this order, if entered — see
+   * ShippingCostEditor and src/lib/profitability.ts. */
+  shippingCostAtSale: number | null;
+  /** Effective shipping mode for this render — the shop's stored default,
+   * or the dashboard's view-only override. When true, shipping is assumed
+   * to net to zero and no cost editor is shown. */
+  assumeNetZero: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasFees = feesBreakdown && typeof feesBreakdown.totalFees === "number";
@@ -160,6 +172,28 @@ export function OrderRow({
             <div style={{ display: "flex", justifyContent: "space-between", color: "var(--muted)" }}>
               <span>Net to seller (before cost of goods)</span>
               <span>{money(feesBreakdown!.netToSeller!)}</span>
+            </div>
+          )}
+          {typeof feesBreakdown!.shippingTotal === "number" && feesBreakdown!.shippingTotal !== 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
+                borderTop: "1px solid var(--line)",
+                paddingTop: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ color: "var(--muted)" }}>Your shipping cost</span>
+              {assumeNetZero ? (
+                <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+                  assumed net-zero — excluded from profit
+                </span>
+              ) : (
+                <ShippingCostEditor orderId={id} initialCost={shippingCostAtSale} />
+              )}
             </div>
           )}
         </div>

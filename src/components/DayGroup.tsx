@@ -15,6 +15,7 @@ export interface DayOrder {
   feesBreakdown: Partial<FeeEngineBreakdown> | null;
   netProfit: number | null;
   profitLabel: string;
+  shippingCostAtSale: number | null;
 }
 
 // One row per day (Sellerboard's day-by-day view) — expands to the
@@ -28,6 +29,7 @@ export function DayGroup({
   feesTotal,
   netProfit,
   currency,
+  assumeNetZero,
 }: {
   dateLabel: string;
   orders: DayOrder[];
@@ -35,6 +37,7 @@ export function DayGroup({
   feesTotal: number | null;
   netProfit: number | null;
   currency: string | null;
+  assumeNetZero: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const money = (n: number) => formatMoney(n, currency);
@@ -89,6 +92,7 @@ export function DayGroup({
           {orders.map((order) => (
             <OrderRow
               key={order.id}
+              id={order.id}
               receiptId={order.receiptId}
               orderDate={order.orderDate}
               items={order.items}
@@ -97,6 +101,8 @@ export function DayGroup({
               feesBreakdown={order.feesBreakdown}
               netProfit={order.netProfit}
               profitLabel={order.profitLabel}
+              shippingCostAtSale={order.shippingCostAtSale}
+              assumeNetZero={assumeNetZero}
             />
           ))}
         </div>

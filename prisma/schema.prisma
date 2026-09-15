@@ -98,6 +98,19 @@ model Shop {
   // hasn't told us yet).
   sellerHasValidVatId Boolean @default(false)
 
+  // assumeShippingNetZero: the shop-level default for how shipping is treated
+  // in profit math (src/lib/profitability.ts). Etsy's API has no field for
+  // what a seller actually paid for postage — only what they charged the
+  // buyer (Order.shippingCost). Most sellers don't charge buyers exactly
+  // what postage costs them, so the conservative default is false: treat
+  // shipping revenue as real revenue, and require a real
+  // Order.shippingCostAtSale before counting it as a cost — never assume it
+  // nets to zero. A seller who deliberately charges buyers their exact
+  // postage cost (making it a real net-zero line) can flip this on here;
+  // the dashboard also has a view-only quick toggle that previews the other
+  // mode without changing this stored default. See PROJECT.md.
+  assumeShippingNetZero Boolean @default(false)
+
   // Encrypted at rest by the app layer before being written here — never store plaintext tokens.
   accessTokenEnc  String? @db.Text
   refreshTokenEnc String? @db.Text
@@ -148,7 +161,16 @@ model Order {
   // totalFees, netToSeller, ratesUsed. {} when the shop's sellerCountry
   // hasn't synced yet (see syncShop).
   feesBreakdown  Json
+  // What the BUYER was charged for shipping (Etsy's total_shipping_cost) —
+  // already counted as revenue inside feesBreakdown.orderTotal. Not what the
+  // seller paid for postage; see shippingCostAtSale below for that.
   shippingCost   Decimal  @db.Decimal(10, 2) @default(0)
+  // What the SELLER actually paid for postage on this order — never
+  // fetched from Etsy (no such field exists), only entered by hand on the
+  // dashboard (ShippingCostEditor). Null = "not entered yet", never assumed
+  // to be 0 or equal to shippingCost — see profitability.ts for how this
+  // combines with Shop.assumeShippingNetZero to produce netProfit.
+  shippingCostAtSale Decimal? @db.Decimal(10, 2)
   createdAt      DateTime @default(now())
 
   shop      Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)

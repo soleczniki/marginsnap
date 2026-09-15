@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
+import { ShippingNetZeroToggle } from "@/components/ShippingNetZeroToggle";
 
 // ISO 3166-1 alpha-2 → full name, via the JS runtime's own locale data
 // (Intl.DisplayNames) rather than a hand-maintained country list — covers
@@ -50,7 +51,7 @@ export default async function Settings() {
         </a>
         <h1 style={{ fontSize: "1.4rem", margin: "8px 0 4px" }}>Settings</h1>
         <p style={{ color: "var(--muted)", marginBottom: 24 }}>
-          These two things decide how MarginSnap works out your Etsy fees for each order.
+          These decide how MarginSnap works out your Etsy fees and profit for each order.
         </p>
 
         <div className="card" style={{ marginBottom: 12 }}>
@@ -72,6 +73,19 @@ export default async function Settings() {
             total may come out very slightly higher than it actually is, never lower.
           </div>
           <VatIdToggle initialValue={shop.sellerHasValidVatId} />
+        </div>
+
+        <div className="card" style={{ marginTop: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Shipping cost</div>
+          <div style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: 12 }}>
+            Etsy only tells us what buyers were charged for shipping, never what it actually cost
+            you to ship. By default, MarginSnap asks you to enter the real cost for each order
+            before counting it in your profit — no order&rsquo;s profit is guessed at. If you
+            always charge buyers exactly what shipping costs you, check this so shipping is
+            treated as a wash instead. You can also preview both ways on the dashboard itself
+            without changing this setting.
+          </div>
+          <ShippingNetZeroToggle initialValue={shop.assumeShippingNetZero} />
         </div>
       </main>
     </>

@@ -167,6 +167,64 @@ the file's actual content immediately after every write, and by running
 is the fix on Bogdan's end; re-verifying immediately after every write is
 the fix on the assistant's end.
 
+**Sync-window bug (2026-09-13)** — a real order stayed stuck at "$300, no
+currency" no matter how many times "Sync now" was clicked, even after the
+money-field and currency fixes above had shipped. Cause: `sync.ts` used
+`shop.lastSyncedAt` as the lower bound for which receipts to re-fetch, so an
+already-synced receipt was never fetched again — freezing its Order-level
+fields at whatever they were on first sync, forever. Fixed by always
+re-fetching a rolling 90-day window on every sync, documented in `sync.ts`.
+Same class of bug found again at the line-item level: `orderLineItem.upsert`'s
+`update` clause only refreshed `cogsAtSale`/`lineProfit`, never `unitPrice`/
+`quantity` — so a line item created before the money()/divisor fix stayed
+frozen at its old (100x) value forever (surfaced as the Products table
+showing €200 revenue on a real €2 item). Fixed the same way: `unitPrice` and
+`quantity` are now refreshed on every sync too. **Lesson for future fixes to
+this file**: any Order or OrderLineItem field that isn't seller-edited must
+be in the `update` clause of its upsert, or a fix to how it's computed will
+never reach rows that already exist.
+
+**Revenue/profit definition unified (2026-09-13)**: the order card and the
+Products table used to disagree — an order card showed the full amount
+charged (item + shipping), the Products table showed item revenue only —
+which looked like a bug even though both numbers were individually correct.
+Unified across every view (`src/lib/profitability.ts`): "revenue" always
+means the full `orderTotal` (item + shipping + gift wrap), and
+shipping/gift-wrap is allocated into each product's revenue proportionally,
+the same way fees are. This is a real behavior change, not a rounding fix —
+profit numbers are visibly higher than before wherever shipping wasn't
+separately costed (see the next item, which addresses exactly that gap).
+
+**Shipping cost tracking (2026-09-13)**: until now, shipping revenue had no
+offsetting cost anywhere — Etsy's API doesn't expose what a seller actually
+paid for postage, so it silently flowed straight to profit. Built out:
+- `Shop.assumeShippingNetZero` (default `false`) — the shop-level setting,
+  on `/dashboard/settings`, for sellers who deliberately charge buyers
+  exactly what shipping costs them (making it a real net-zero line).
+- `Order.shippingCostAtSale` (nullable) — the seller's real postage cost per
+  order, entered by hand (`ShippingCostEditor.tsx`,
+  `/api/orders/[id]/shipping-cost`) since Etsy has no field for it. Never
+  assumed to be 0 or equal to what the buyer was charged — an order that
+  charged for shipping and isn't in net-zero mode shows "add shipping cost
+  to see profit" until entered, the same missing-cost pattern already used
+  for COGS.
+- A dashboard-only quick toggle (`ShippingModeToggle.tsx`, `?shipping=count|
+  exclude` on `/dashboard`) previews both modes without touching the
+  shop's stored setting — view-only, never persisted.
+- `src/lib/profitability.ts`'s `orderCogsFees`/`groupOrdersByDay`/
+  `aggregateByListing` all now take an explicit `assumeNetZero` flag rather
+  than reading it off the shop, so the same functions serve both the
+  stored default and the dashboard's override.
+- Migration: `add_shipping_cost_tracking` (adds the two fields above) — run
+  this migration if it hasn't been applied yet.
+
+**Not yet built** — explicitly deferred, not forgotten: a first-time
+onboarding flow, right after connecting an Etsy shop, that asks the seller
+directly for VAT status, the shipping net-zero assumption, and (by design,
+extensibly) whatever similar per-shop settings get added later — rather
+than leaving sellers to discover `/dashboard/settings` on their own. This is
+its own, larger piece of work; needs its own scoping pass before starting.
+
 Known simplifications, documented in the code, not yet product decisions:
 - Multi-quantity billing state (which unit is "the first sold" on a
   listing) is now derived in `sync.ts` from order-line-item history per
