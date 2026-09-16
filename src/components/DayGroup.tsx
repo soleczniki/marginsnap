@@ -16,6 +16,10 @@ export interface DayOrder {
   netProfit: number | null;
   profitLabel: string;
   shippingCostAtSale: number | null;
+  /** True when this order charged for shipping, the shop is in real-cost
+   * mode, and no cost has been entered yet — lets OrderRow make
+   * "add shipping cost to see profit" clickable. See profitability.ts. */
+  shippingUnknown: boolean;
 }
 
 // One row per day (Sellerboard's day-by-day view) — expands to the
@@ -102,6 +106,7 @@ export function DayGroup({
               netProfit={order.netProfit}
               profitLabel={order.profitLabel}
               shippingCostAtSale={order.shippingCostAtSale}
+              shippingUnknown={order.shippingUnknown}
               assumeNetZero={assumeNetZero}
             />
           ))}

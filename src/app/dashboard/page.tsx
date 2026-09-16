@@ -142,6 +142,7 @@ export default async function Dashboard({
       netProfit,
       profitLabel,
       shippingCostAtSale: order.shippingCostAtSale !== null ? Number(order.shippingCostAtSale) : null,
+      shippingUnknown,
     };
   }
 

@@ -70,7 +70,49 @@ them alone until someone actually wants to pay. Don't extend, don't wire up
 checkout flows, don't add pricing logic — that's explicitly out of scope
 until it's needed.
 
+## Backlog
+
+Small known issues, not part of the phased roadmap above — pick up when
+convenient, not blocking anything:
+
+- **Magic-link sign-in occasionally fails** ("The sign in link is no longer
+  valid") on a first click (2026-09-15). Most likely cause: an email
+  security scanner (Gmail's own link-scanning, or a corporate mail gateway)
+  auto-visiting the link to check it before the real click, which burns the
+  one-time NextAuth token. Possible fix if it keeps happening: an
+  intermediate "click to confirm sign-in" page that isn't itself the
+  token-consuming URL, so a scanner's pre-fetch doesn't burn it.
+- **Chrome "Dangerous site" warning on marginsnap.app for some visitors**
+  (2026-09-15) — confirmed a false positive (Incognito, extensions
+  disabled, showed no warning), so a browser extension was flagging it, not
+  Google Safe Browsing itself. No action needed unless it starts showing up
+  in Incognito too — if it does, Google's Safe Browsing has actually
+  flagged the domain (a known false-positive pattern for NextAuth's default
+  `/api/auth/*` route on fresh domains) and the fix is a reconsideration
+  request in Google Search Console's Security Issues section.
+
 ## Current status (as of 2026-09-13)
+
+**Security incident, resolved (2026-09-15)**: Supabase's own security
+advisor flagged every table in the `public` schema as publicly readable/
+writable/deletable through Supabase's auto-generated PostgREST API (Row-
+Level Security had never been enabled on any table). This app only ever
+talks to Postgres through Prisma's direct connection (`DATABASE_URL`/
+`DIRECT_URL`) — Supabase's REST API was never intentionally used — but
+Supabase exposes every `public`-schema table through it by default
+regardless, so this had been open since the `init` migration
+(2026-09-10), roughly 5 days. One real mitigating factor: `Shop.accessTokenEnc`/
+`refreshTokenEnc` are encrypted at rest, so even a raw read wouldn't have
+handed over usable Etsy tokens — but shop/user/order data would have been
+readable in plaintext by anyone with the project URL. Fixed by running
+`ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` on every table (including
+Prisma's own `_prisma_migrations`) via Supabase's SQL Editor — with no
+policies defined, this fully blocks the anon/PostgREST path while Prisma's
+connection (which connects as the table owner) is unaffected. Confirmed via
+Supabase's Security Advisor: 0 errors after the fix. **Checklist for any
+future table/migration**: enable RLS the moment a table exists, before
+relying on "the app doesn't use the Supabase API anyway" as the reason it's
+safe — it isn't, by default.
 
 **Scaffold** (`C:\ClaudeCode\Apps\marginsnap`): Next.js 14 + TypeScript +
 Prisma (Postgres, hosted on Supabase) + NextAuth (email magic link) + PWA

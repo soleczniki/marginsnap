@@ -29,6 +29,7 @@ export function OrderRow({
   netProfit,
   profitLabel,
   shippingCostAtSale,
+  shippingUnknown,
   assumeNetZero,
 }: {
   id: string;
@@ -43,6 +44,10 @@ export function OrderRow({
   /** The seller's real postage cost for this order, if entered — see
    * ShippingCostEditor and src/lib/profitability.ts. */
   shippingCostAtSale: number | null;
+  /** True when profitLabel is specifically "add shipping cost to see
+   * profit" — makes that label clickable, expanding straight to the
+   * ShippingCostEditor below instead of leaving it as inert text. */
+  shippingUnknown: boolean;
   /** Effective shipping mode for this render — the shop's stored default,
    * or the dashboard's view-only override. When true, shipping is assumed
    * to net to zero and no cost editor is shown. */
@@ -138,9 +143,26 @@ export function OrderRow({
             </span>
           </button>
         )}
-        <span className={netProfit !== null ? (netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>
-          {profitLabel}
-        </span>
+        {shippingUnknown && !assumeNetZero ? (
+          <button
+            onClick={() => setExpanded(true)}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: "var(--muted)",
+              textDecoration: "underline",
+              cursor: "pointer",
+              font: "inherit",
+            }}
+          >
+            {profitLabel}
+          </button>
+        ) : (
+          <span className={netProfit !== null ? (netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>
+            {profitLabel}
+          </span>
+        )}
       </div>
 
       {itemsSummary && (
