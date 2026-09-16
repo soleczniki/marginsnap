@@ -90,6 +90,12 @@ convenient, not blocking anything:
   flagged the domain (a known false-positive pattern for NextAuth's default
   `/api/auth/*` route on fresh domains) and the fix is a reconsideration
   request in Google Search Console's Security Issues section.
+- **Root URL doesn't redirect a logged-in visitor to `/dashboard`**
+  (2026-09-16) — visiting `https://www.marginsnap.app/` while already
+  signed in shows the login/landing page instead of taking the user
+  straight to `/dashboard`. Likely just a missing session check on the `/`
+  route (should mirror whatever check `/dashboard` itself already does to
+  redirect a signed-out visitor the other way). Not yet investigated.
 
 ## Current status (as of 2026-09-13)
 

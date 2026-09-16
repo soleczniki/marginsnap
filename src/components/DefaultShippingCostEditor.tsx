@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { currencySymbol } from "@/lib/money";
 
 // Sets a listing's "typical shipping cost" — mirrors CogsEditor.tsx's
-// input+Save pattern, plus a second "Apply to existing orders" button that
-// backfills any of this listing's past orders that don't have a real
-// shipping cost yet (never overwrites one that's already set). See
-// src/app/api/listings/[id]/shipping-cost and .../apply-default-shipping-cost.
+// input+Save pattern, plus a second "Apply to orders without a shipping
+// cost" button that backfills any of this listing's past orders that
+// don't have a real shipping cost yet (never overwrites one that's
+// already set — label renamed 2026-09-16 so that's obvious without
+// reading the code). See src/app/api/listings/[id]/shipping-cost and
+// .../apply-default-shipping-cost.
 export function DefaultShippingCostEditor({
   listingId,
   initialCost,
@@ -99,7 +101,7 @@ export function DefaultShippingCostEditor({
         title={initialCost === null ? "Save a default shipping cost first" : undefined}
         style={{ fontSize: "0.8rem" }}
       >
-        {applying ? "Applying…" : "Apply to existing orders"}
+        {applying ? "Applying…" : "Apply to orders without a shipping cost"}
       </button>
       {applyResult !== null && !applying && (
         <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
