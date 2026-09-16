@@ -214,7 +214,7 @@ export function OrderRow({
                   assumed net-zero — excluded from profit
                 </span>
               ) : (
-                <ShippingCostEditor orderId={id} initialCost={shippingCostAtSale} />
+                <ShippingCostEditor orderId={id} initialCost={shippingCostAtSale} currency={currency} />
               )}
             </div>
           )}

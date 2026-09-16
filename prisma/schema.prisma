@@ -134,6 +134,14 @@ model Listing {
   title         String
   sku           String?
   cogsAmount    Decimal? @db.Decimal(10, 2) // null until the seller sets it — never default to 0
+  // defaultShippingCost: "what shipping usually costs me for this item" —
+  // never charged automatically, just a convenience default. sync.ts seeds a
+  // new order's shippingCostAtSale from this ONLY when the order is a
+  // single-listing order (so we're never guessing how to split it across
+  // different products); a seller can still edit any individual order's
+  // real cost afterward when it happened to ship differently (e.g.
+  // international). See src/lib/profitability.ts and ShippingCostEditor.
+  defaultShippingCost Decimal? @db.Decimal(10, 2)
   isActive      Boolean  @default(true)
   updatedAt     DateTime @updatedAt
 

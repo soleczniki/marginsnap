@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CogsEditor } from "@/components/CogsEditor";
+import { DefaultShippingCostEditor } from "@/components/DefaultShippingCostEditor";
 
 // "Manage costs" (Blueprint workflow §2) — the screen the rest of the app has
 // been pointing at ("that entry screen is next up"). Type in what each item
@@ -16,10 +17,18 @@ export default async function ManageCosts() {
   const shop = await prisma.shop.findFirst({ where: { userId: session.user.id } });
   if (!shop) redirect("/dashboard");
 
-  const listings = await prisma.listing.findMany({
-    where: { shopId: shop.id },
-    orderBy: { title: "asc" },
-  });
+  const [listings, mostRecentOrder] = await Promise.all([
+    prisma.listing.findMany({
+      where: { shopId: shop.id },
+      orderBy: { title: "asc" },
+    }),
+    // Listing/Shop don't store a currency (Order does, from the real
+    // receipt) — a shop is effectively one currency in practice, so the
+    // most recent order's is a reasonable stand-in for the $/€/£ prefix on
+    // the shipping-cost inputs below, rather than assuming dollars.
+    prisma.order.findFirst({ where: { shopId: shop.id }, orderBy: { orderDate: "desc" }, select: { currency: true } }),
+  ]);
+  const currency = mostRecentOrder?.currency ?? null;
 
   return (
     <>
@@ -68,16 +77,30 @@ export default async function ManageCosts() {
                 flexWrap: "wrap",
               }}
             >
-              <div>
-                <div>{listing.title}</div>
-                {listing.sku && (
-                  <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>SKU: {listing.sku}</div>
-                )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+                <div>
+                  <div>{listing.title}</div>
+                  {listing.sku && (
+                    <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>SKU: {listing.sku}</div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ color: "var(--muted)", fontSize: "0.85rem", minWidth: 90 }}>Cost of goods</span>
+                  <CogsEditor
+                    listingId={listing.id}
+                    initialCogs={listing.cogsAmount ? Number(listing.cogsAmount) : null}
+                    currency={currency}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ color: "var(--muted)", fontSize: "0.85rem", minWidth: 90 }}>Typical shipping</span>
+                  <DefaultShippingCostEditor
+                    listingId={listing.id}
+                    initialCost={listing.defaultShippingCost ? Number(listing.defaultShippingCost) : null}
+                    currency={currency}
+                  />
+                </div>
               </div>
-              <CogsEditor
-                listingId={listing.id}
-                initialCogs={listing.cogsAmount ? Number(listing.cogsAmount) : null}
-              />
             </div>
           ))}
         </div>

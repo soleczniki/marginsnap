@@ -22,3 +22,21 @@ export function formatMoney(amount: number, currency: string | null): string {
 export function formatPercent(rate: number): string {
   return new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 3 }).format(rate);
 }
+
+/**
+ * Just the symbol ("€", "$", "£"...) for an input-field prefix — same
+ * Intl-based approach as formatMoney, so an editable-cost input never shows
+ * a hardcoded "$" next to numbers that are actually in the order's real
+ * currency (found 2026-09-16: ShippingCostEditor/CogsEditor had a literal
+ * "$" span regardless of the shop's currency). Falls back to "$" only when
+ * currency is null (rows synced before that column existed).
+ */
+export function currencySymbol(currency: string | null): string {
+  if (!currency) return "$";
+  try {
+    const parts = new Intl.NumberFormat("en-US", { style: "currency", currency }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? currency;
+  } catch {
+    return currency;
+  }
+}

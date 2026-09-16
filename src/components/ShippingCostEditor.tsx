@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { currencySymbol } from "@/lib/money";
 
 // Inline postage-cost editor for one order row — mirrors CogsEditor.tsx's
 // pattern exactly, but per-order (postage cost varies order to order,
 // unlike a listing's cost-of-goods). Only rendered by OrderRow when the
 // shop is in real-cost shipping mode and this order actually charged for
 // shipping — see OrderRow.tsx and src/lib/profitability.ts.
-export function ShippingCostEditor({ orderId, initialCost }: { orderId: string; initialCost: number | null }) {
+export function ShippingCostEditor({
+  orderId,
+  initialCost,
+  currency,
+}: {
+  orderId: string;
+  initialCost: number | null;
+  /** The order's real currency, so the input's prefix matches the €/£/$
+   * shown everywhere else on this order rather than assuming dollars. */
+  currency: string | null;
+}) {
   const [value, setValue] = useState(initialCost !== null ? String(initialCost) : "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -40,7 +51,7 @@ export function ShippingCostEditor({ orderId, initialCost }: { orderId: string; 
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ color: "var(--muted)" }}>$</span>
+      <span style={{ color: "var(--muted)" }}>{currencySymbol(currency)}</span>
       <input
         type="number"
         min="0"

@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { currencySymbol } from "@/lib/money";
 
 // Inline cost-of-goods editor for one listing row on the "Manage costs" page.
 // Saving only affects future syncs' profit math, never past orders — see the
 // note in src/app/api/listings/[id]/cogs/route.ts.
-export function CogsEditor({ listingId, initialCogs }: { listingId: string; initialCogs: number | null }) {
+export function CogsEditor({
+  listingId,
+  initialCogs,
+  currency,
+}: {
+  listingId: string;
+  initialCogs: number | null;
+  /** Shown as the input's prefix (found 2026-09-16: this was a hardcoded
+   * "$" regardless of the shop's real currency). See dashboard/listings. */
+  currency: string | null;
+}) {
   const [value, setValue] = useState(initialCogs !== null ? String(initialCogs) : "");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -38,7 +49,7 @@ export function CogsEditor({ listingId, initialCogs }: { listingId: string; init
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ color: "var(--muted)" }}>$</span>
+      <span style={{ color: "var(--muted)" }}>{currencySymbol(currency)}</span>
       <input
         type="number"
         min="0"

@@ -232,6 +232,30 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
         update: { unitPrice, quantity, cogsAtSale: cogs, lineProfit },
       });
     }
+
+    // ---------- Shipping-cost default (PROJECT.md "flat/default shipping
+    // cost", 2026-09-16) ----------
+    // Only when this order's shippingCostAtSale is still null (never
+    // overwrites a real value the seller entered or corrected by hand —
+    // true whether this order is brand new or was already synced and just
+    // never touched) AND every line item on it is the SAME listing (a
+    // multi-product order is left alone; combining two different defaults
+    // into one package's cost isn't a safe guess — see
+    // apply-default-shipping-cost/route.ts for the same rule applied
+    // on-demand to existing orders).
+    if (order.shippingCostAtSale === null && resolvedItems.length > 0) {
+      const distinctListingIds = new Set(resolvedItems.map((ri) => ri.listing.id));
+      if (distinctListingIds.size === 1) {
+        const onlyListing = resolvedItems[0].listing;
+        if (onlyListing.defaultShippingCost !== null) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { shippingCostAtSale: onlyListing.defaultShippingCost },
+          });
+        }
+      }
+    }
+
     ordersSynced++;
   }
 
