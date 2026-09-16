@@ -7,10 +7,16 @@ import { OrderRow, type OrderRowItem } from "@/components/OrderRow";
 import { DayGroup, type DayOrder } from "@/components/DayGroup";
 import { PeriodPicker } from "@/components/PeriodPicker";
 import { ShippingModeToggle } from "@/components/ShippingModeToggle";
+import { CustomDatePicker } from "@/components/CustomDatePicker";
+import { DashboardTabs, type ViewKey } from "@/components/DashboardTabs";
 import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
-import { isPeriodKey, periodRange, type PeriodKey } from "@/lib/periods";
+import { isPeriodKey, periodRange, toDateInputValue, type PeriodKey } from "@/lib/periods";
 import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
+
+function isViewKey(value: string | undefined): value is ViewKey {
+  return value === "orders" || value === "products";
+}
 
 // V1 of the dashboard (Blueprint workflow §4), now Phase-2 shaped
 // (PROJECT.md roadmap): a period picker, orders grouped by day, and a
@@ -18,7 +24,14 @@ import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItem
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: { connected?: string; period?: string; shipping?: string };
+  searchParams: {
+    connected?: string;
+    period?: string;
+    shipping?: string;
+    view?: string;
+    start?: string;
+    end?: string;
+  };
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
@@ -81,8 +94,23 @@ export default async function Dashboard({
     );
   }
 
-  const periodKey: PeriodKey = isPeriodKey(searchParams.period) ? searchParams.period : "30d";
-  const { start, end } = periodRange(periodKey);
+  const viewKey: ViewKey = isViewKey(searchParams.view) ? searchParams.view : "orders";
+
+  // Custom date range ("Custom dates" trigger, CustomDatePicker.tsx,
+  // 2026-09-16 request): only actually used when both start and end parse
+  // to valid dates — otherwise this silently falls back to the 30-day
+  // default rather than crashing on a malformed/incomplete URL.
+  const rawPeriodKey: PeriodKey = isPeriodKey(searchParams.period) ? searchParams.period : "30d";
+  let customRange: { start: Date; end: Date } | undefined;
+  if (rawPeriodKey === "custom" && searchParams.start && searchParams.end) {
+    const parsedStart = new Date(`${searchParams.start}T00:00:00.000Z`);
+    const parsedEnd = new Date(`${searchParams.end}T23:59:59.999Z`);
+    if (!Number.isNaN(parsedStart.getTime()) && !Number.isNaN(parsedEnd.getTime())) {
+      customRange = parsedStart <= parsedEnd ? { start: parsedStart, end: parsedEnd } : { start: parsedEnd, end: parsedStart };
+    }
+  }
+  const periodKey: PeriodKey = rawPeriodKey === "custom" && !customRange ? "30d" : rawPeriodKey;
+  const { start, end } = periodRange(periodKey, new Date(), customRange);
 
   // Shipping mode: the dashboard's view-only quick toggle (ShippingModeToggle)
   // can override the shop's stored default (Shop.assumeShippingNetZero) for
@@ -143,7 +171,18 @@ export default async function Dashboard({
       profitLabel,
       shippingCostAtSale: order.shippingCostAtSale !== null ? Number(order.shippingCostAtSale) : null,
       shippingUnknown,
+      singleListingId: singleListingIdOf(order),
     };
+  }
+
+  // Same "single listing on this order" check sync.ts and
+  // apply-default-shipping-cost/route.ts already use to decide when a
+  // listing's default shipping cost is safe to apply — reused here so
+  // ShippingCostEditor's "Save and apply" action only shows up where it's
+  // actually safe to run.
+  function singleListingIdOf(order: OrderWithItems): string | null {
+    const distinctListingIds = new Set(order.lineItems.map((li) => li.listingId));
+    return distinctListingIds.size === 1 ? order.lineItems[0].listingId : null;
   }
 
   return (
@@ -193,43 +232,66 @@ export default async function Dashboard({
           </div>
         )}
 
-        <div style={{ marginBottom: 12 }}>
-          <PeriodPicker active={periodKey} shipping={shippingOverride} />
+        <DashboardTabs
+          active={viewKey}
+          period={periodKey}
+          shipping={shippingOverride}
+          start={periodKey === "custom" ? searchParams.start : undefined}
+          end={periodKey === "custom" ? searchParams.end : undefined}
+        />
+
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+          <PeriodPicker active={periodKey} shipping={shippingOverride} view={viewKey} />
+          <CustomDatePicker
+            active={periodKey === "custom"}
+            start={periodKey === "custom" ? searchParams.start : start ? toDateInputValue(start) : undefined}
+            end={toDateInputValue(end)}
+            shipping={shippingOverride}
+            view={viewKey}
+          />
         </div>
         <div style={{ marginBottom: 20 }}>
-          <ShippingModeToggle active={shippingMode} period={periodKey} />
+          <ShippingModeToggle
+            active={shippingMode}
+            period={periodKey}
+            view={viewKey}
+            start={periodKey === "custom" ? searchParams.start : undefined}
+            end={periodKey === "custom" ? searchParams.end : undefined}
+          />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h2 style={{ fontSize: "1.05rem" }}>Orders</h2>
-          {orders.length > 0 && (
-            <a href="/api/export/csv" className="button" style={{ fontSize: "0.85rem" }}>
-              Export CSV
-            </a>
-          )}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
-          {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders in this period.</p>}
-          {dayGroups.map((day) =>
-            day.orders.length === 1 ? (
-              <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} assumeNetZero={assumeNetZero} />
-            ) : (
-              <DayGroup
-                key={day.dateKey}
-                dateLabel={day.dateLabel}
-                orders={day.orders.map(toDayOrder)}
-                grossTotal={day.grossTotal}
-                feesTotal={day.feesTotal}
-                netProfit={day.netProfit}
-                currency={day.currency}
-                assumeNetZero={assumeNetZero}
-              />
-            )
-          )}
-        </div>
-
-        <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>Products</h2>
-        <ProductsTable products={products} />
+        {viewKey === "orders" ? (
+          <>
+            {orders.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                <a href="/api/export/csv" className="button" style={{ fontSize: "0.85rem" }}>
+                  Export CSV
+                </a>
+              </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders in this period.</p>}
+              {dayGroups.map((day) =>
+                day.orders.length === 1 ? (
+                  <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} assumeNetZero={assumeNetZero} />
+                ) : (
+                  <DayGroup
+                    key={day.dateKey}
+                    dateLabel={day.dateLabel}
+                    orders={day.orders.map(toDayOrder)}
+                    grossTotal={day.grossTotal}
+                    feesTotal={day.feesTotal}
+                    netProfit={day.netProfit}
+                    currency={day.currency}
+                    assumeNetZero={assumeNetZero}
+                  />
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <ProductsTable products={products} />
+        )}
       </main>
     </>
   );

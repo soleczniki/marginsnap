@@ -6,10 +6,12 @@ import { currencySymbol } from "@/lib/money";
 
 // Sets a listing's "typical shipping cost" — mirrors CogsEditor.tsx's
 // input+Save pattern, plus a second "Apply to orders without a shipping
-// cost" button that backfills any of this listing's past orders that
+// cost" action that backfills any of this listing's past orders that
 // don't have a real shipping cost yet (never overwrites one that's
 // already set — label renamed 2026-09-16 so that's obvious without
-// reading the code). See src/app/api/listings/[id]/shipping-cost and
+// reading the code; restyled the same day from a boxed button to a plain
+// text link, at Bogdan's request, matching ShippingCostEditor's identical
+// action). See src/app/api/listings/[id]/shipping-cost and
 // .../apply-default-shipping-cost.
 export function DefaultShippingCostEditor({
   listingId,
@@ -95,11 +97,19 @@ export function DefaultShippingCostEditor({
       {savedAt && !saving && <span style={{ color: "var(--profit-positive, green)", fontSize: "0.85rem" }}>Saved</span>}
       <button
         type="button"
-        className="button"
         onClick={handleApply}
         disabled={applying || initialCost === null}
         title={initialCost === null ? "Save a default shipping cost first" : undefined}
-        style={{ fontSize: "0.8rem" }}
+        style={{
+          background: "none",
+          border: "none",
+          padding: 0,
+          color: "var(--muted)",
+          textDecoration: "underline",
+          cursor: "pointer",
+          font: "inherit",
+          fontSize: "0.8rem",
+        }}
       >
         {applying ? "Applying…" : "Apply to orders without a shipping cost"}
       </button>

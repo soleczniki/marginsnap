@@ -31,6 +31,7 @@ export function OrderRow({
   shippingCostAtSale,
   shippingUnknown,
   assumeNetZero,
+  singleListingId,
 }: {
   id: string;
   receiptId: string;
@@ -52,6 +53,11 @@ export function OrderRow({
    * or the dashboard's view-only override. When true, shipping is assumed
    * to net to zero and no cost editor is shown. */
   assumeNetZero: boolean;
+  /** The one listing this order is for, or null when it has more than one
+   * distinct listing — passed straight through to ShippingCostEditor's
+   * "Save and apply to all orders without shipping cost" action. See
+   * dashboard/page.tsx's toDayOrder. */
+  singleListingId: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasFees = feesBreakdown && typeof feesBreakdown.totalFees === "number";
@@ -214,7 +220,12 @@ export function OrderRow({
                   assumed net-zero — excluded from profit
                 </span>
               ) : (
-                <ShippingCostEditor orderId={id} initialCost={shippingCostAtSale} currency={currency} />
+                <ShippingCostEditor
+                  orderId={id}
+                  initialCost={shippingCostAtSale}
+                  currency={currency}
+                  singleListingId={singleListingId}
+                />
               )}
             </div>
           )}

@@ -20,6 +20,9 @@ export interface DayOrder {
    * mode, and no cost has been entered yet — lets OrderRow make
    * "add shipping cost to see profit" clickable. See profitability.ts. */
   shippingUnknown: boolean;
+  /** The one listing this order is for, or null when it has more than one
+   * distinct listing — see dashboard/page.tsx's toDayOrder. */
+  singleListingId: string | null;
 }
 
 // One row per day (Sellerboard's day-by-day view) — expands to the
@@ -108,6 +111,7 @@ export function DayGroup({
               shippingCostAtSale={order.shippingCostAtSale}
               shippingUnknown={order.shippingUnknown}
               assumeNetZero={assumeNetZero}
+              singleListingId={order.singleListingId}
             />
           ))}
         </div>
