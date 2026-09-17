@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { SignInForm } from "@/components/SignInForm";
 
 // The actual marketing site for marginsnap.app's root URL (2026-09-17,
@@ -35,7 +36,7 @@ export function LandingPage() {
           gap: 12,
         }}
       >
-        <span style={{ fontWeight: 700, fontSize: "1.05rem" }}>🧵 MarginSnap</span>
+        <Logo />
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <a href="#pricing" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
             Pricing
@@ -43,7 +44,7 @@ export function LandingPage() {
           <a href="#start" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
             Sign in
           </a>
-          <a href="#start" className="button" style={{ fontSize: "0.85rem" }}>
+          <a href="#start" className="button-accent" style={{ fontSize: "0.85rem" }}>
             Start free trial
           </a>
         </div>
@@ -60,8 +61,8 @@ export function LandingPage() {
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: "var(--accent-ink)",
-                background: "var(--accent-soft)",
+                color: "var(--warm-ink)",
+                background: "var(--warm-soft)",
                 padding: "5px 12px",
                 borderRadius: 20,
                 marginBottom: 18,
@@ -79,7 +80,7 @@ export function LandingPage() {
               person running an Etsy shop.
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <a href="#start" className="button" style={{ fontSize: "1rem", padding: "13px 24px" }}>
+              <a href="#start" className="button-accent" style={{ fontSize: "1rem", padding: "13px 24px" }}>
                 Start your free trial
               </a>
               <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -88,7 +89,8 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div style={{ flex: "1 1 320px", display: "flex", justifyContent: "center" }}>
+          <div style={{ flex: "1 1 320px", display: "flex", justifyContent: "center", position: "relative" }}>
+            <HeroShapes />
             <ProfitExampleCard />
           </div>
         </div>
@@ -147,7 +149,7 @@ export function LandingPage() {
 
       {/* ---------- Pricing, shown plainly ---------- */}
       <section id="pricing" style={{ maxWidth: 480, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <div className="card" style={{ textAlign: "center", padding: "36px 32px" }}>
+        <div className="card" style={{ textAlign: "center", padding: "36px 32px", borderTop: "3px solid var(--warm)" }}>
           <p style={{ fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
             One plan. Everything included.
           </p>
@@ -162,7 +164,7 @@ export function LandingPage() {
             <li>✓ Dated cost-of-goods history</li>
             <li>✓ CSV export</li>
           </ul>
-          <a href="#start" className="button" style={{ width: "100%", fontSize: "1rem" }}>
+          <a href="#start" className="button-accent" style={{ width: "100%", fontSize: "1rem" }}>
             Start your 30-day free trial
           </a>
           <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 12 }}>
@@ -187,6 +189,67 @@ export function LandingPage() {
   );
 }
 
+// Wordmark + mark (2026-09-17, replacing the bare "🧵 MarginSnap" text —
+// Bogdan's feedback that the logo "needs work"). The mark is an original
+// price-tag shape, not a copy of any real brand's icon — tags fit both the
+// craft aesthetic and the marketplace/for-sale connotation Bogdan asked
+// for ("shapes reminiscent of Etsy") without borrowing anyone's actual logo.
+function Logo() {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <svg width="26" height="26" viewBox="0 0 26 26" style={{ transform: "rotate(-8deg)" }}>
+        <path
+          d="M2,13 L9,3 L23,3 L23,23 L9,23 Z"
+          fill="var(--warm)"
+          stroke="var(--ink)"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+        <circle cx="9" cy="8" r="1.8" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1" />
+      </svg>
+      <span style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
+        Margin<span style={{ color: "var(--warm-ink)" }}>Snap</span>
+      </span>
+    </span>
+  );
+}
+
+// Small tag-shaped confetti + a soft color blob behind the hero's example
+// card — decorative only, purely to add some warmth/color to what was a
+// flat gray hero (Bogdan's feedback, 2026-09-17). Absolutely positioned
+// against the "position: relative" wrapper in the hero; aria-hidden since
+// none of this carries information.
+function HeroShapes() {
+  return (
+    <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "-10%",
+          right: "5%",
+          width: 220,
+          height: 220,
+          borderRadius: "50%",
+          background: "var(--warm-soft)",
+          filter: "blur(2px)",
+          opacity: 0.9,
+        }}
+      />
+      <TagShape style={{ position: "absolute", top: "-6%", left: "-4%", transform: "rotate(18deg)" }} size={30} />
+      <TagShape style={{ position: "absolute", bottom: "4%", right: "-2%", transform: "rotate(-25deg)" }} size={22} />
+    </div>
+  );
+}
+
+function TagShape({ size = 24, style }: { size?: number; style?: CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 26 26" style={style}>
+      <path d="M2,13 L9,3 L23,3 L23,23 L9,23 Z" fill="var(--warm)" opacity={0.85} />
+      <circle cx="9" cy="8" r="1.8" fill="var(--paper)" />
+    </svg>
+  );
+}
+
 function FeatureBlurb({ emoji, title, body }: { emoji: string; title: string; body: string }) {
   return (
     <div className="card">
@@ -205,8 +268,8 @@ function StepBlurb({ step, title, body }: { step: string; title: string; body: s
           width: 32,
           height: 32,
           borderRadius: "50%",
-          background: "var(--accent)",
-          color: "var(--paper)",
+          background: "var(--warm)",
+          color: "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -270,7 +333,7 @@ function ComparisonTable() {
             <th style={{ padding: "10px 12px" }}></th>
             <th style={{ padding: "10px 12px" }}>A spreadsheet</th>
             <th style={{ padding: "10px 12px" }}>Sellerboard / Craftybase</th>
-            <th style={{ padding: "10px 12px", color: "var(--accent-ink)" }}>MarginSnap</th>
+            <th style={{ padding: "10px 12px", color: "var(--warm-ink)" }}>MarginSnap</th>
           </tr>
         </thead>
         <tbody>

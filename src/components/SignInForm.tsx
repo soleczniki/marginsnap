@@ -63,7 +63,7 @@ export function SignInForm({
               <p style={{ marginBottom: 12 }}>
                 That sign-in link has expired. Request a new one below.
               </p>
-              <button type="button" className="button" onClick={requestNewLink}>
+              <button type="button" className="button-accent" onClick={requestNewLink}>
                 Request a new sign-in link
               </button>
             </>
@@ -93,7 +93,7 @@ export function SignInForm({
               color: "var(--ink)",
             }}
           />
-          <button type="submit" className="button">
+          <button type="submit" className="button-accent">
             Sign in
           </button>
         </form>
