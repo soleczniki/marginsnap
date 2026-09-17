@@ -17,7 +17,7 @@ import { SignInForm } from "@/components/SignInForm";
 // those CSS variables rather than introducing a second palette. Headline
 // strategy: blend all three angles discussed rather than pick one — the
 // hero leads with the pain point, a comparison section positions against
-// spreadsheets/Sellerboard, and the trial/pricing sections lead with
+// spreadsheets/bigger-seller tools, and the trial/pricing sections lead with
 // "no card, cancel anytime" to reduce signup friction. Pricing shown
 // plainly (not hidden behind the CTA), per Bogdan's call. No real product
 // screenshots yet (Bogdan didn't have any ready) — the "profit breakdown"
@@ -76,8 +76,8 @@ export function LandingPage() {
             <p style={{ fontSize: "1.1rem", color: "var(--muted)", lineHeight: 1.55, marginBottom: 28 }}>
               Etsy shows you what you sold. It doesn&rsquo;t show you what fees, shipping, and
               materials took back out of it. MarginSnap connects to your shop and works that out
-              automatically — the profit picture Sellerboard gives bigger sellers, sized for one
-              person running an Etsy shop.
+              automatically — the same profit picture bigger sellers get from pricier,
+              multi-marketplace tools, sized for one person running an Etsy shop.
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <a href="#start" className="button-accent" style={{ fontSize: "1rem", padding: "13px 24px" }}>
@@ -120,7 +120,7 @@ export function LandingPage() {
       {/* ---------- How it works / comparison angle ---------- */}
       <section style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 24px 56px" }}>
         <h2 style={{ fontSize: "1.6rem", textAlign: "center", marginBottom: 8 }}>
-          A Sellerboard for one-person Etsy shops
+          A real profit dashboard, sized for one person
         </h2>
         <p style={{ textAlign: "center", color: "var(--muted)", maxWidth: 560, margin: "0 auto 36px" }}>
           Not a spreadsheet you maintain. Not an accounting suite built for teams. Just: connect
@@ -262,7 +262,7 @@ function FeatureBlurb({ emoji, title, body }: { emoji: string; title: string; bo
 
 function StepBlurb({ step, title, body }: { step: string; title: string; body: string }) {
   return (
-    <div>
+    <div style={{ textAlign: "center" }}>
       <div
         style={{
           width: 32,
@@ -274,7 +274,7 @@ function StepBlurb({ step, title, body }: { step: string; title: string; body: s
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 700,
-          marginBottom: 12,
+          margin: "0 auto 12px",
         }}
       >
         {step}
@@ -332,7 +332,7 @@ function ComparisonTable() {
           <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
             <th style={{ padding: "10px 12px" }}></th>
             <th style={{ padding: "10px 12px" }}>A spreadsheet</th>
-            <th style={{ padding: "10px 12px" }}>Sellerboard / Craftybase</th>
+            <th style={{ padding: "10px 12px" }}>Bigger-seller tools</th>
             <th style={{ padding: "10px 12px", color: "var(--warm-ink)" }}>MarginSnap</th>
           </tr>
         </thead>
