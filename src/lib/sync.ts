@@ -8,6 +8,7 @@ import {
   refreshAccessToken,
 } from "@/lib/etsy";
 import { computeOrderFees, type FeeEngineLineItem } from "@/lib/feeEngine";
+import { resolveCogsForDate } from "@/lib/cogs";
 import type { Shop } from "@prisma/client";
 
 // Shared sync logic — pulls one shop's listings + orders from Etsy and writes
@@ -160,10 +161,21 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
     for (const transaction of receipt.transactions ?? []) {
       const listing = await prisma.listing.findUnique({
         where: { shopId_etsyListingId: { shopId: shop.id, etsyListingId: BigInt(transaction.listing_id) } },
+        include: { cogsEntries: true },
       });
       if (!listing) continue; // no matching listing synced — same as before, this line item is skipped
 
-      resolvedItems.push({ transaction, listing, cogs: listing.cogsAmount ? Number(listing.cogsAmount) : null, unitPrice: money(transaction.price) });
+      // Resolved from this listing's dated cost history (src/lib/cogs.ts),
+      // using THIS ORDER's date — not "whatever the listing's cost is right
+      // now" (that was the pre-2026-09-16 behavior; see schema.prisma's
+      // OrderLineItem.cogsAtSale comment for why that was actually a bug).
+      const cogsEntry = resolveCogsForDate(listing.cogsEntries, order.orderDate);
+      resolvedItems.push({
+        transaction,
+        listing,
+        cogs: cogsEntry ? Number(cogsEntry.cogsAmount) : null,
+        unitPrice: money(transaction.price),
+      });
     }
 
     // ---------- Real fee computation (feeEngine.ts) ----------

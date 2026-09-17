@@ -13,6 +13,7 @@ import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
 import { isPeriodKey, periodRange, toDateInputValue, type PeriodKey } from "@/lib/periods";
 import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
+import { resolveCogsForDate } from "@/lib/cogs";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -132,10 +133,10 @@ export default async function Dashboard({
       orderBy: { orderDate: "desc" },
       include: { lineItems: { include: { listing: true } } },
     }),
-    prisma.listing.findMany({ where: { shopId: shop.id } }),
+    prisma.listing.findMany({ where: { shopId: shop.id }, include: { cogsEntries: true } }),
   ]);
 
-  const listingsMissingCogs = listings.filter((l) => l.cogsAmount === null).length;
+  const listingsMissingCogs = listings.filter((l) => resolveCogsForDate(l.cogsEntries, new Date()) === null).length;
 
   // Cast once here (Prisma's generated type already matches OrderWithItems;
   // this is just the Decimal→number boundary the rest of this file assumes).

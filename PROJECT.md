@@ -90,12 +90,21 @@ convenient, not blocking anything:
   flagged the domain (a known false-positive pattern for NextAuth's default
   `/api/auth/*` route on fresh domains) and the fix is a reconsideration
   request in Google Search Console's Security Issues section.
-- **Root URL doesn't redirect a logged-in visitor to `/dashboard`**
-  (2026-09-16) — visiting `https://www.marginsnap.app/` while already
-  signed in shows the login/landing page instead of taking the user
-  straight to `/dashboard`. Likely just a missing session check on the `/`
-  route (should mirror whatever check `/dashboard` itself already does to
-  redirect a signed-out visitor the other way). Not yet investigated.
+- ~~**Root URL doesn't redirect a logged-in visitor to `/dashboard`**~~ —
+  **fixed 2026-09-16.** `/` is now a server component that checks the
+  session and redirects to `/dashboard` when signed in (sign-in form moved
+  to `src/components/SignInForm.tsx`).
+- **Batch/lot cost-of-goods costing** (e.g. Sellerboard's "the next 1000
+  units cost €5, the next 1500 cost €6") — deliberately deferred, not an
+  oversight. Bogdan asked for this alongside the dated-cost model
+  (2026-09-16); the recommendation was to ship the dated/effective-cost
+  model only for now, since it covers the common real case ("materials got
+  pricier, reflect that going forward or backdate it") without requiring
+  FIFO-style unit-consumption-order tracking, which is meaningfully more
+  complex and cuts against this app's "not an accounting suite" positioning
+  (see "What v1 is" above). Revisit only if sellers actually need precise
+  per-batch numbers rather than "what did this cost around this time."
+  Bogdan agreed to this sequencing.
 
 ## Current status (as of 2026-09-13)
 
@@ -265,6 +274,55 @@ paid for postage, so it silently flowed straight to profit. Built out:
   stored default and the dashboard's override.
 - Migration: `add_shipping_cost_tracking` (adds the two fields above) — run
   this migration if it hasn't been applied yet.
+
+**Cost-of-goods rewritten as a dated history (2026-09-16/17)**: replaced
+`Listing.cogsAmount` (a single value) with a `CogsEntry` table
+(`listingId`, `cogsAmount`, `effectiveFrom`, `createdAt`) — mirrors
+Sellerboard's model, at Bogdan's request. Setting a new cost on the Manage
+Costs page (`CogsEditor.tsx`) is always just inserting a row; three modes
+all reduce to picking `effectiveFrom`:
+- **From today** — `effectiveFrom` = today. Can never affect an
+  already-synced order (its date is necessarily in the past), so this
+  saves immediately with no confirmation.
+- **Retroactively, all orders** — `effectiveFrom` = a sentinel date
+  (1970-01-01, `EARLIEST_SENTINEL` in `src/lib/cogs.ts`) old enough to
+  predate every real order, so "apply to everything" needs no special-case
+  logic anywhere else.
+- **From a specific date** — `effectiveFrom` = that date.
+
+Resolving a listing's cost as of a given date (`resolveCogsForDate`): the
+entry with the latest `effectiveFrom` at or before that date, ties broken
+by `createdAt` (most recently added wins). `sync.ts` now resolves each
+line item's cost using **the order's own date**, not "whatever the
+listing's cost is right now."
+
+That last point fixed a real, pre-existing bug found while building this:
+because `sync.ts` always re-fetches/re-upserts a rolling 90-day window on
+every sync (see "Sync-window bug" above), the old code recomputed
+`cogsAtSale`/`lineProfit` from the listing's *current* `cogsAmount` on
+every sync — so editing a listing's cost and then syncing silently
+rewrote profit for any order in that 90-day window, contradicting the
+documented "editing COGS never rewrites history" promise. Fixed as a side
+effect of the per-order-date resolution above.
+
+Retroactive/from-date changes **can** genuinely overwrite an
+already-computed `cogsAtSale`/`lineProfit` for existing orders (unlike the
+shipping-cost backfill, which only ever fills in a value that was never
+set) — before either mode saves, `CogsEditor.tsx` calls
+`GET /api/listings/[id]/cogs/affected-count` to get the exact count of
+order line items that would change, then requires an explicit
+`window.confirm()` naming that count: *"This will overwrite the cost of
+goods for N orders that are already synced. Do you really want to
+proceed? This change can't be undone."* The `confirmed: true` flag is
+also enforced server-side (`POST /api/listings/[id]/cogs` — 400 without
+it for any mode other than "today"), not just left to the frontend.
+
+Migration `replace_cogs_amount_with_entries` is data-preserving: the
+generated SQL was hand-edited (via `--create-only`, before applying) to
+seed one retroactive `cogs_entries` row (`effectiveFrom` = 1970-01-01) per
+listing that already had a `cogsAmount`, positioned before the
+`DROP COLUMN cogsAmount` — so no seller's existing cost was lost in the
+migration.
 
 **Not yet built** — explicitly deferred, not forgotten: a first-time
 onboarding flow, right after connecting an Etsy shop, that asks the seller

@@ -133,7 +133,13 @@ model Listing {
   etsyListingId BigInt
   title         String
   sku           String?
-  cogsAmount    Decimal? @db.Decimal(10, 2) // null until the seller sets it — never default to 0
+  // cogsAmount removed 2026-09-16 — replaced by CogsEntry below, a dated
+  // history of cost-of-goods values (Bogdan's request: mirror Sellerboard's
+  // "apply from today / retroactively for all orders / from a specific
+  // date"). "The current cost" is now: the CogsEntry with the latest
+  // effectiveFrom at or before "now" — see src/lib/cogs.ts's
+  // resolveCogsForDate, which sync.ts and the Manage Costs page both use
+  // (with "now" swapped for the order's own date, for sync.ts).
   // defaultShippingCost: "what shipping usually costs me for this item" —
   // never charged automatically, just a convenience default. sync.ts seeds a
   // new order's shippingCostAtSale from this ONLY when the order is a
@@ -147,10 +153,42 @@ model Listing {
 
   shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orderLineItems OrderLineItem[]
+  cogsEntries    CogsEntry[]
 
   @@unique([shopId, etsyListingId])
   @@index([shopId])
   @@map("listings")
+}
+
+// Dated cost-of-goods history for a listing (2026-09-16, replaces the old
+// single Listing.cogsAmount column). Setting a new cost is always just
+// inserting a row here — the three Sellerboard-style modes Bogdan asked for
+// are all the SAME operation, only effectiveFrom differs:
+//   - "apply from today":            effectiveFrom = today
+//   - "apply retroactively to all":  effectiveFrom = EARLIEST_SENTINEL
+//     (src/lib/cogs.ts) — a date old enough to predate every real order, so
+//     this entry becomes the fallback for anything with no later entry
+//   - "apply from a specific date":  effectiveFrom = that date
+// Resolving a listing's cost as of a given date: the entry with the latest
+// effectiveFrom at or before that date (resolveCogsForDate). Adding an
+// entry never touches already-synced OrderLineItems by itself — recomputing
+// their cogsAtSale/lineProfit for orders the new entry now covers is a
+// separate, explicit, user-confirmed action (see
+// src/app/api/listings/[id]/cogs/route.ts) — the seller sees exactly how
+// many orders will change and must confirm before it runs, since (unlike
+// the shipping-cost backfill, which only ever fills in a value that was
+// never set) this can genuinely overwrite an existing computed value.
+model CogsEntry {
+  id            String   @id @default(cuid())
+  listingId     String
+  cogsAmount    Decimal  @db.Decimal(10, 2)
+  effectiveFrom DateTime
+  createdAt     DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, effectiveFrom])
+  @@map("cogs_entries")
 }
 
 model Order {
@@ -196,8 +234,14 @@ model OrderLineItem {
   quantity    Int      @default(1)
   unitPrice   Decimal  @db.Decimal(10, 2)
 
-  // Snapshotted at sync time from Listing.cogsAmount — editing COGS later never
-  // rewrites history (Blueprint §4).
+  // Resolved at sync time from whichever CogsEntry was effective on this
+  // order's date (src/lib/cogs.ts) — NOT simply "whatever the listing's
+  // cost is right now" (that was the pre-2026-09-16 behavior, and it was
+  // buggier than intended: see PROJECT.md's note on the 90-day resync
+  // window silently rewriting recent orders' cost every sync). Only
+  // changes after the fact through the explicit, confirmed recompute in
+  // src/app/api/listings/[id]/cogs/route.ts — never as a side effect of a
+  // plain sync.
   cogsAtSale  Decimal? @db.Decimal(10, 2)
   lineProfit  Decimal? @db.Decimal(10, 2) // null when cogsAtSale is null — "add a cost to see profit"
 
