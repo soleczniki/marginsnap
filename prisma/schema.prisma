@@ -183,10 +183,47 @@ model Listing {
   shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orderLineItems OrderLineItem[]
   cogsEntries    CogsEntry[]
+  adSpendEntries AdSpendEntry[]
 
   @@unique([shopId, etsyListingId])
   @@index([shopId])
   @@map("listings")
+}
+
+// Manual per-listing, per-period ad spend (2026-09-17, Bogdan's request) —
+// Etsy's public API has no ad-spend endpoint at all (confirmed via
+// github.com/etsy/open-api/discussions/1082, an unresolved feature request
+// since 2023), and there's no documented CSV export for it in Shop Manager
+// either, so this is the seller's own numbers, entered by hand-off two
+// paths: pasting the copied table from Etsy's own Ads stats page
+// (src/lib/adSpendImport.ts, no AI involved, free) or uploading/pasting a
+// screenshot of it (src/lib/adSpendVision.ts, one Anthropic vision call per
+// image). Both paths land here through the SAME reviewed-and-confirmed save
+// step (src/app/api/ad-spend/save/route.ts) — nothing from either parser is
+// ever written straight to the database, since a misread number here
+// silently distorts profit. periodStart/periodEnd are whatever the seller
+// confirmed on the review screen (auto-detected where possible, always
+// editable) — deliberately NOT constrained to match one of the dashboard's
+// standard period buckets, since Etsy's own Ads stats page lets sellers
+// pick arbitrary date ranges too. Overlap with a given dashboard period
+// (not exact containment) is what profitability.ts sums per listing — see
+// its comment for why proration wasn't worth the complexity for v1.
+model AdSpendEntry {
+  id          String   @id @default(cuid())
+  listingId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  amountSpent Decimal  @db.Decimal(10, 2)
+  currency    String?
+  // "paste" | "screenshot" — which review flow produced this row, kept
+  // around for support/debugging, not shown as anything load-bearing in the UI.
+  source      String
+  createdAt   DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, periodStart, periodEnd])
+  @@map("ad_spend_entries")
 }
 
 // Dated cost-of-goods history for a listing (2026-09-16, replaces the old

@@ -165,6 +165,16 @@ export interface ProductAggregate {
    * postage cost hasn't been entered yet (real-cost mode only). */
   shippingUnknown: boolean;
   cogsTotal: number | null; // null if any contributing line item has no COGS set
+  /** Sum of AdSpendEntry rows for this listing whose period overlaps the
+   * requested period (see aggregateByListing's adSpendByListing param) —
+   * always a number, never null/pending, since "nothing entered" and "$0
+   * spent" both mean 0 here. Deliberately NOT part of the "is profit known
+   * yet" null-chain the other three cost lines are: unlike COGS/shipping,
+   * there's no per-order signal that ad spend even applies, so profit can't
+   * meaningfully be blocked on it the way it is on a missing COGS value.
+   * The dashboard's disclosure note is what tells the seller this is 0
+   * because it's untracked, not because it's genuinely zero. */
+  adSpendTotal: number;
   netProfit: number | null;
   currency: string | null;
 }
@@ -191,8 +201,17 @@ interface Acc {
  * so a product's revenue and profit here reconcile with the order-level
  * totals above it — see the file header for the profit convention itself.
  * `assumeNetZero` is the effective shipping mode for this view, same as
- * orderCogsFees. */
-export function aggregateByListing(orders: OrderWithItems[], assumeNetZero: boolean): ProductAggregate[] {
+ * orderCogsFees. `adSpendByListing` (2026-09-17, Bogdan's request) is the
+ * caller's pre-summed AdSpendEntry total per listing for whatever period is
+ * being viewed — see dashboard/page.tsx for how that's queried — and is
+ * subtracted from each listing's profit here; omit it (or leave a listing
+ * out of it) and that listing's ad spend is simply treated as 0, same as
+ * before this feature existed. */
+export function aggregateByListing(
+  orders: OrderWithItems[],
+  assumeNetZero: boolean,
+  adSpendByListing: Record<string, number> = {}
+): ProductAggregate[] {
   const map = new Map<string, Acc>();
 
   for (const order of orders) {
@@ -250,10 +269,11 @@ export function aggregateByListing(orders: OrderWithItems[], assumeNetZero: bool
     const allocatedFees = acc.feesUnknown ? null : round2(acc.feesSum);
     const allocatedShipping = acc.shippingUnknown ? null : round2(acc.shippingSum);
     const cogsTotal = acc.cogsUnknown ? null : round2(acc.cogsSum);
+    const adSpendTotal = round2(adSpendByListing[acc.listingId] ?? 0);
     const grossRevenue = round2(acc.revenueSum);
     const netProfit =
       allocatedFees !== null && allocatedShipping !== null && cogsTotal !== null
-        ? round2(grossRevenue - allocatedFees - allocatedShipping - cogsTotal)
+        ? round2(grossRevenue - allocatedFees - allocatedShipping - cogsTotal - adSpendTotal)
         : null;
     return {
       listingId: acc.listingId,
@@ -265,6 +285,7 @@ export function aggregateByListing(orders: OrderWithItems[], assumeNetZero: bool
       allocatedShipping,
       shippingUnknown: acc.shippingUnknown,
       cogsTotal,
+      adSpendTotal,
       netProfit,
       currency: acc.currency,
     };

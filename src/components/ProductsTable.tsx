@@ -15,6 +15,11 @@ const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(-
 // note it already reconciles with the order-level numbers, so there's no
 // separate "make per-product profit add up" fix needed here. Read-only for
 // now (no inline cost editing) — that still lives on the Manage Costs page.
+//
+// Ad spend column (2026-09-17): unlike the other three cost columns, "—"
+// here means "not tracked for this period," not "zero fees/cost" — see
+// ProductAggregate.adSpendTotal's comment in profitability.ts. Entering it
+// lives on a separate page (/dashboard/ad-spend), not inline here.
 export function ProductsTable({ products }: { products: ProductAggregate[] }) {
   if (products.length === 0) {
     return <p style={{ color: "var(--muted)" }}>No products sold in this period yet.</p>;
@@ -31,6 +36,7 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
             <th style={thStyle}>Fees</th>
             <th style={thStyle}>Shipping</th>
             <th style={thStyle}>Cost</th>
+            <th style={thStyle}>Ad spend</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Profit</th>
           </tr>
         </thead>
@@ -56,6 +62,15 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
                 </td>
                 <td style={tdStyle}>
                   {p.cogsTotal !== null ? money(p.cogsTotal) : <span style={{ color: "var(--muted)" }}>—</span>}
+                </td>
+                <td style={tdStyle}>
+                  {p.adSpendTotal > 0 ? (
+                    money(p.adSpendTotal)
+                  ) : (
+                    <span style={{ color: "var(--muted)" }} title="Not tracked yet for this period — see Ad spend">
+                      —
+                    </span>
+                  )}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>
                   <span className={p.netProfit !== null ? (p.netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>

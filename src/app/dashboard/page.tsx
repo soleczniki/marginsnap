@@ -73,6 +73,9 @@ export default async function Dashboard({
         <a href="/dashboard/listings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Costs
         </a>
+        <a href="/dashboard/ad-spend" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Ad spend
+        </a>
         <a href="/dashboard/settings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Settings
         </a>
@@ -143,7 +146,7 @@ export default async function Dashboard({
     shippingOverride === "exclude" ? true : shippingOverride === "count" ? false : shop.assumeShippingNetZero;
   const shippingMode: "count" | "exclude" = assumeNetZero ? "exclude" : "count";
 
-  const [orders, listings] = await Promise.all([
+  const [orders, listings, periodAdSpend, totalAdSpendCount] = await Promise.all([
     prisma.order.findMany({
       where: {
         shopId: shop.id,
@@ -153,7 +156,26 @@ export default async function Dashboard({
       include: { lineItems: { include: { listing: true } } },
     }),
     prisma.listing.findMany({ where: { shopId: shop.id }, include: { cogsEntries: true } }),
+    // Ad spend (2026-09-17): overlap with the selected period, not exact
+    // containment — a seller's Etsy report might span "Sep 1-15" while the
+    // dashboard's showing "last 7 days"; summing anything that overlaps at
+    // all is a deliberate v1 simplification over trying to prorate it, see
+    // profitability.ts. `start: null` (the "all time" view) just means no
+    // lower bound, matching how orders are already queried above.
+    prisma.adSpendEntry.findMany({
+      where: {
+        listing: { shopId: shop.id },
+        periodStart: { lte: end },
+        ...(start ? { periodEnd: { gte: start } } : {}),
+      },
+      select: { listingId: true, amountSpent: true },
+    }),
+    prisma.adSpendEntry.count({ where: { listing: { shopId: shop.id } } }),
   ]);
+  const adSpendByListing: Record<string, number> = {};
+  for (const entry of periodAdSpend) {
+    adSpendByListing[entry.listingId] = (adSpendByListing[entry.listingId] ?? 0) + Number(entry.amountSpent);
+  }
 
   // First-time onboarding (2026-09-17): once the first sync has produced at
   // least one listing, send a not-yet-onboarded shop through the wizard
@@ -169,7 +191,7 @@ export default async function Dashboard({
   // Cast once here (Prisma's generated type already matches OrderWithItems;
   // this is just the Decimal→number boundary the rest of this file assumes).
   const ordersWithItems = orders as unknown as OrderWithItems[];
-  const products = aggregateByListing(ordersWithItems, assumeNetZero);
+  const products = aggregateByListing(ordersWithItems, assumeNetZero, adSpendByListing);
 
   function toOrderRowItems(order: OrderWithItems): OrderRowItem[] {
     return order.lineItems.map((li) => ({ title: li.listing.title, quantity: li.quantity }));
@@ -281,6 +303,25 @@ export default async function Dashboard({
             end={periodKey === "custom" ? searchParams.end : undefined}
           />
         </div>
+
+        {/* Ad spend disclosure (2026-09-17, Bogdan's request): Etsy gives us
+           no way to tie ad spend to one order, so the Orders tab's profit
+           NEVER includes it, by design — that's worth saying plainly rather
+           than leaving it to look like an oversight. The Products tab does
+           subtract it (see profitability.ts), but only for whatever's
+           actually been entered — until at least one entry exists, say so
+           there too instead of leaving a silently-optimistic number. */}
+        {viewKey === "orders" ? (
+          <p style={{ color: "var(--muted)", fontSize: "0.82rem", marginBottom: 12 }}>
+            Profit above doesn&rsquo;t include Etsy Ads spend — it can&rsquo;t be tied to one order. See the Products tab for
+            that, once you&rsquo;ve <a href="/dashboard/ad-spend">added your ad spend</a>.
+          </p>
+        ) : totalAdSpendCount === 0 ? (
+          <p style={{ color: "var(--muted)", fontSize: "0.82rem", marginBottom: 12 }}>
+            Profit above doesn&rsquo;t include Etsy Ads spend yet — <a href="/dashboard/ad-spend">add it here</a> to see the
+            full picture.
+          </p>
+        ) : null}
 
         {viewKey === "orders" ? (
           <>

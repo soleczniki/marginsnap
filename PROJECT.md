@@ -131,6 +131,14 @@ convenient, not blocking anything:
 - **Mobile**: not yet checked on a real phone/small viewport as of
   2026-09-17 (Bogdan's note) — do this before launch even if nothing else
   prompts it.
+- **Set `ANTHROPIC_API_KEY` in Vercel's env vars.** Needed for the ad-spend
+  screenshot import (2026-09-17) — see "Current status" below. Without it,
+  the paste-text ad-spend import still works fine; only the
+  upload-a-screenshot option returns a "not set up yet" error. Get a key
+  from console.anthropic.com and add it to Vercel's Project Settings →
+  Environment Variables (and to a local `.env` for `npm run dev`), then
+  redeploy. `ANTHROPIC_VISION_MODEL` is optional — only set it if the
+  default model in `src/lib/adSpendVision.ts` ever needs swapping out.
 - **Multi-shop**: explicitly single-shop-per-login for the beta (decided
   2026-09-17) — every page loads `prisma.shop.findFirst(...)`, so a second
   connected shop would currently be silently invisible. Etsy itself ties
@@ -463,6 +471,42 @@ nothing in the UI pointed at it once a shop was already connected. Added
 `ReconnectShopLink` (a small client component with a `window.confirm()`
 warning, same "make sure they meant it" pattern as `CogsEditor`'s
 retroactive-cost confirm) to the settings page.
+
+**Ad spend tracking added (2026-09-17)**: Etsy has no ad-spend API endpoint
+(confirmed via github.com/etsy/open-api/discussions/1082, an unresolved
+feature request since 2023) and no documented CSV export for it either, so
+this is a manual import, per listing per period, via a new page
+(`/dashboard/ad-spend`, `AdSpendImporter.tsx`) with two entry paths:
+
+- **Paste from Etsy**: the seller copies the listings table straight off
+  Etsy's own Ads stats page and pastes it as text. Parsed by
+  `src/lib/adSpendImport.ts` (tab/comma-separated, tries to find a header
+  row to identify the Spend column by name; falls back to "the one
+  money-shaped cell in the row" when there's no header, flagged as
+  low-confidence for the review screen).
+- **Upload/paste a screenshot**: same idea, but reading the numbers off an
+  image via one Anthropic API vision call (`src/lib/adSpendVision.ts`, plain
+  `fetch`, no SDK dependency added). Needs `ANTHROPIC_API_KEY` set — see
+  "Before beta launch" above. Without it, this option returns a clear
+  "not set up yet" error rather than a 500; the paste-text option is
+  unaffected either way.
+
+Both paths land in the exact same place: an editable review table
+(`AdSpendImporter.tsx`) showing the detected period, a listing picker per
+row (pre-matched by `matchListingLabel`'s fuzzy title match, always
+overridable), and an editable amount — nothing is saved until the seller
+confirms it there (`/api/ad-spend/save`), since a misread number would
+otherwise silently distort profit. New `AdSpendEntry` model
+(`listingId`, `periodStart`, `periodEnd`, `amountSpent`, `currency`,
+`source`) — see its comment in `schema.prisma`.
+
+This subtracts from a listing's profit on the **Products** tab
+(`aggregateByListing`'s new `adSpendByListing` param — sums any entries
+whose period overlaps the dashboard's selected period, no proration) but
+deliberately NEVER touches the **Orders** tab's per-order profit, since ad
+spend can't be tied to one order. Both tabs now show a disclosure line
+saying exactly that, linking to `/dashboard/ad-spend` — see
+`dashboard/page.tsx`'s "Ad spend disclosure" comment.
 
 **Not yet built** — explicitly deferred, not forgotten: nothing under this
 heading currently.
