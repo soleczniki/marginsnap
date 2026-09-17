@@ -122,8 +122,15 @@ convenient, not blocking anything:
   don't always behave identically.
 - **Etsy Commercial Access** — required before anyone other than Bogdan's
   own connected shop can use this (see "Etsy API access — path forward"
-  below). Check status/actually submit if not already done — long manual
-  review lead time, should not be left until everything else is ready.
+  below). **Update 2026-09-17: a previous application was rejected** —
+  reason not yet known. Next step: find the actual rejection notice (email
+  from Etsy, or a status/reason shown under "Apps You've Made" on Etsy's
+  developer dashboard) before resubmitting anything, rather than guessing
+  at what to fix. This is the single hard blocker on inviting any beta
+  tester other than Bogdan himself — nothing else on this list stops that.
+- **Mobile**: not yet checked on a real phone/small viewport as of
+  2026-09-17 (Bogdan's note) — do this before launch even if nothing else
+  prompts it.
 - **Multi-shop**: explicitly single-shop-per-login for the beta (decided
   2026-09-17) — every page loads `prisma.shop.findFirst(...)`, so a second
   connected shop would currently be silently invisible. Etsy itself ties
@@ -423,12 +430,42 @@ above.
   `npx prisma migrate dev` (no `--create-only` hand-edit) should be safe.
   **Verify the generated SQL matches this expectation before applying.**
 
+**Landing page shipped (2026-09-17)**: marginsnap.app's root URL now shows
+a real marketing page (`src/components/LandingPage.tsx`) instead of just
+the bare sign-in form — hero, problem/feature blurbs, a "how it works"
+section, a generic (no-brand-name) comparison table, pricing shown
+plainly, and the sign-in/signup form itself at the bottom. Warm orange
+accent color (`--warm`/`--warm-ink`/`--warm-soft` in `globals.css`) added
+alongside the existing sage-green palette, landing-page-only for now, plus
+an original price-tag logo mark (`Logo` in `LandingPage.tsx`) replacing
+the old "🧵 MarginSnap" text. Two follow-up fixes same day: dropped
+"Sellerboard" from the visible copy (Bogdan's call — naming a real
+competitor as a generic category noun in a headline is a riskier trademark
+use than a factual side-by-side comparison, which the table still does
+without naming brands) and removed a duplicated Privacy/Terms footer
+(`SignInForm`'s own footer was showing under the login field AND the
+page's own footer right below it — `SignInForm` now takes a
+`showLegalLinks` prop, `false` when the landing page embeds it).
+
+**ToS/Privacy agreement checkbox added (2026-09-17)**: `SignInForm` didn't
+have one before — a required checkbox ("I agree to the Terms and Privacy
+Policy") now gates the same submit button used for both signup and
+sign-in (the form can't tell which before the email's submitted, so this
+shows every time, not just on a first-ever signup). No new DB field — it's
+a plain HTML `required` checkbox, so the browser blocks submission until
+checked; there's no stored record of *when* someone agreed beyond that.
+
+**"Reconnect a different shop" added to Settings (2026-09-17)**: the swap
+logic already existed (`/api/etsy/callback` deletes whatever shop is
+currently connected — cascading to its listings/orders/cost history — and
+creates a fresh one from whatever Etsy account completes OAuth next), but
+nothing in the UI pointed at it once a shop was already connected. Added
+`ReconnectShopLink` (a small client component with a `window.confirm()`
+warning, same "make sure they meant it" pattern as `CogsEditor`'s
+retroactive-cost confirm) to the settings page.
+
 **Not yet built** — explicitly deferred, not forgotten: nothing under this
-heading currently — the onboarding flow that used to be listed here
-shipped 2026-09-17 (see above). The **marketing landing page** for
-marginsnap.app's root URL (currently just the sign-in form, no sales copy)
-is the next big piece of not-yet-built work — see the top of this doc's
-change log / recent conversation for status once that starts.
+heading currently.
 
 Known simplifications, documented in the code, not yet product decisions:
 - Multi-quantity billing state (which unit is "the first sold" on a

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
 import { ShippingNetZeroToggle } from "@/components/ShippingNetZeroToggle";
+import { ReconnectShopLink } from "@/components/ReconnectShopLink";
 
 // ISO 3166-1 alpha-2 → full name, via the JS runtime's own locale data
 // (Intl.DisplayNames) rather than a hand-maintained country list — covers
@@ -86,6 +87,15 @@ export default async function Settings() {
             without changing this setting.
           </div>
           <ShippingNetZeroToggle initialValue={shop.assumeShippingNetZero} />
+        </div>
+
+        <div className="card" style={{ marginTop: 12, borderColor: "var(--loss)" }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Shop connection</div>
+          <div style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: 12 }}>
+            Currently connected: {shop.shopName ?? "your shop"}. Reconnecting swaps in whichever
+            Etsy shop you authorize next — it doesn&rsquo;t add a second shop alongside this one.
+          </div>
+          <ReconnectShopLink />
         </div>
       </main>
     </>

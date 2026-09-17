@@ -83,25 +83,47 @@ export function SignInForm({
           )}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="card" style={{ display: "flex", gap: 8 }}>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+        <form onSubmit={handleSubmit} className="card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--surface-2)",
+                color: "var(--ink)",
+              }}
+            />
+            <button type="submit" className="button-accent">
+              Sign in
+            </button>
+          </div>
+          {/* Required (2026-09-17, Bogdan's request) — same form serves both
+             signup and sign-in (there's no way to tell which before the
+             email is submitted), so this shows every time rather than only
+             on a first-ever signup. A plain HTML `required` checkbox is
+             enough: the browser blocks submission natively until it's
+             checked, no extra state needed here. */}
+          <label
             style={{
-              flex: 1,
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid var(--line)",
-              background: "var(--surface-2)",
-              color: "var(--ink)",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              fontSize: "0.8rem",
+              color: "var(--muted)",
             }}
-          />
-          <button type="submit" className="button-accent">
-            Sign in
-          </button>
+          >
+            <input type="checkbox" required style={{ marginTop: 3 }} />
+            <span>
+              I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+            </span>
+          </label>
         </form>
       )}
 
