@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SyncButton } from "@/components/SyncButton";
-import { OrderRow, type OrderRowItem } from "@/components/OrderRow";
-import { DayGroup, type DayOrder } from "@/components/DayGroup";
+import { OrdersTable, type OrderRowItem, type OrderTableRow } from "@/components/OrdersTable";
 import { PeriodPicker } from "@/components/PeriodPicker";
 import { ShippingModeToggle } from "@/components/ShippingModeToggle";
 import { CustomDatePicker } from "@/components/CustomDatePicker";
@@ -12,7 +11,7 @@ import { DashboardTabs, type ViewKey } from "@/components/DashboardTabs";
 import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
 import { isPeriodKey, periodRange, toDateInputValue, type PeriodKey } from "@/lib/periods";
-import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
+import { aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
 import { resolveCogsForDate } from "@/lib/cogs";
 import { getNotifications } from "@/lib/notifications";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
@@ -155,14 +154,13 @@ export default async function Dashboard({
   // Cast once here (Prisma's generated type already matches OrderWithItems;
   // this is just the Decimal→number boundary the rest of this file assumes).
   const ordersWithItems = orders as unknown as OrderWithItems[];
-  const dayGroups = groupOrdersByDay(ordersWithItems, assumeNetZero);
   const products = aggregateByListing(ordersWithItems, assumeNetZero);
 
   function toOrderRowItems(order: OrderWithItems): OrderRowItem[] {
     return order.lineItems.map((li) => ({ title: li.listing.title, quantity: li.quantity }));
   }
 
-  function toDayOrder(order: OrderWithItems): DayOrder {
+  function toOrderTableRow(order: OrderWithItems): OrderTableRow {
     const { totalFees, netProfit, shippingUnknown } = orderCogsFees(order, assumeNetZero);
     let profitLabel: string;
     if (netProfit !== null) {
@@ -181,7 +179,7 @@ export default async function Dashboard({
       items: toOrderRowItems(order),
       grossAmount: Number(order.grossAmount),
       currency: order.currency,
-      feesBreakdown: order.feesBreakdown as DayOrder["feesBreakdown"],
+      feesBreakdown: order.feesBreakdown as OrderTableRow["feesBreakdown"],
       netProfit,
       profitLabel,
       shippingCostAtSale: order.shippingCostAtSale !== null ? Number(order.shippingCostAtSale) : null,
@@ -273,25 +271,7 @@ export default async function Dashboard({
                 </a>
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {orders.length === 0 && <p style={{ color: "var(--muted)" }}>No orders in this period.</p>}
-              {dayGroups.map((day) =>
-                day.orders.length === 1 ? (
-                  <OrderRow key={day.dateKey} {...toDayOrder(day.orders[0])} assumeNetZero={assumeNetZero} />
-                ) : (
-                  <DayGroup
-                    key={day.dateKey}
-                    dateLabel={day.dateLabel}
-                    orders={day.orders.map(toDayOrder)}
-                    grossTotal={day.grossTotal}
-                    feesTotal={day.feesTotal}
-                    netProfit={day.netProfit}
-                    currency={day.currency}
-                    assumeNetZero={assumeNetZero}
-                  />
-                )
-              )}
-            </div>
+            <OrdersTable orders={ordersWithItems.map(toOrderTableRow)} assumeNetZero={assumeNetZero} />
           </>
         ) : (
           <ProductsTable products={products} />
