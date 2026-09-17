@@ -56,7 +56,7 @@ export const authOptions: NextAuthOptions = {
   <h2 style="margin: 0 0 8px;">Sign in to MarginSnap</h2>
   <p style="color: #555; margin: 0 0 20px;">Click below to finish signing in. This link expires in 5 minutes.</p>
   <p style="margin: 0 0 20px;">
-    <a href="${confirmUrl.toString()}" style="display:inline-block;padding:12px 22px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
+    <a href="${confirmUrl.toString()}" style="display:inline-block;padding:12px 22px;background:#e8622c;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
       Sign in to MarginSnap
     </a>
   </p>

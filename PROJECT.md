@@ -109,6 +109,13 @@ convenient, not blocking anything:
   (see "What v1 is" above). Revisit only if sellers actually need precise
   per-batch numbers rather than "what did this cost around this time."
   Bogdan agreed to this sequencing.
+- **Separate sign-up from sign-in** (2026-09-17, Bogdan's note) — the
+  landing page currently has a single "enter your email" form
+  (`src/components/SignInForm.tsx`) that serves both a brand-new user and a
+  returning one identically (NextAuth's email/magic-link provider creates
+  the account on first use, so there's no separate signup step today).
+  Bogdan wants these split into distinct flows. Deferred for now — revisit
+  when there's time.
 
 ## Before beta launch — do not forget
 

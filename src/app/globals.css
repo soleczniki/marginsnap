@@ -60,8 +60,15 @@ a { color: var(--accent-ink); }
 
 .button {
   display: inline-block;
-  background: var(--ink);
-  color: var(--paper);
+  /* Was var(--ink) (near-black) until 2026-09-17 — Bogdan asked for the
+     warm orange accent (already used for the landing page's CTAs and the
+     sign-in email button) to be the app's actual button color everywhere,
+     not just a special-case accent. This is now the SAME color as
+     .button-accent below; that class is kept only so any old
+     className="button-accent" usage still renders identically rather than
+     needing a hunt-and-replace. */
+  background: var(--warm);
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 10px 18px;
