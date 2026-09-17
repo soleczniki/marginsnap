@@ -16,6 +16,7 @@ export function SignInForm({
   title = "MarginSnap",
   subtitle = "See what you actually made on that sale, in the time it takes to wrap the package.",
   id,
+  showLegalLinks = true,
 }: {
   /** Overridable so the landing page (2026-09-17) can reuse this exact form
    * — same email/magic-link mechanics, no separate signup flow to build —
@@ -25,6 +26,11 @@ export function SignInForm({
   /** Anchor id, so a page embedding this more than once (or linking to it
    * from a nav CTA) has something to scroll to. */
   id?: string;
+  /** LandingPage.tsx already has its own Privacy/Terms footer right below
+   * this form (2026-09-17 fix — they were showing up twice) — it passes
+   * false here. Defaults to true so this form still stands on its own if
+   * anything ever embeds it without a footer of its own. */
+  showLegalLinks?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -99,9 +105,11 @@ export function SignInForm({
         </form>
       )}
 
-      <p style={{ marginTop: 40, fontSize: "0.82rem", color: "var(--muted)" }}>
-        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
-      </p>
+      {showLegalLinks && (
+        <p style={{ marginTop: 40, fontSize: "0.82rem", color: "var(--muted)" }}>
+          <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+        </p>
+      )}
     </main>
   );
 }

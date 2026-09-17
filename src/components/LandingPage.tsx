@@ -179,6 +179,7 @@ export function LandingPage() {
           id="start"
           title="Start your free trial"
           subtitle="Enter your email — we'll send a sign-in link. New here? This creates your account and starts your 30-day free trial, no card needed."
+          showLegalLinks={false}
         />
       </section>
 
