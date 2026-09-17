@@ -106,6 +106,28 @@ convenient, not blocking anything:
   per-batch numbers rather than "what did this cost around this time."
   Bogdan agreed to this sequencing.
 
+## Before beta launch — do not forget
+
+- **Switch Stripe from sandbox/test mode to production/live mode.** As of
+  2026-09-17 the Stripe integration (`src/lib/stripe.ts`,
+  `src/app/api/stripe/*`) is still wired to test keys/sandbox. Before any
+  real beta user's card gets charged, swap in live API keys, the live
+  webhook signing secret, and a real (non-test) Price ID for the $9/mo beta
+  plan — and re-test the checkout → webhook → `subscriptionStatus` flow
+  end-to-end against live mode once switched, since test-mode webhooks
+  don't always behave identically.
+- **Etsy Commercial Access** — required before anyone other than Bogdan's
+  own connected shop can use this (see "Etsy API access — path forward"
+  below). Check status/actually submit if not already done — long manual
+  review lead time, should not be left until everything else is ready.
+- **Multi-shop**: explicitly single-shop-per-login for the beta (decided
+  2026-09-17) — every page loads `prisma.shop.findFirst(...)`, so a second
+  connected shop would currently be silently invisible. Etsy itself ties
+  one member account to one shop (confirmed 2026-09-17: a seller with two
+  shops has two separate Etsy logins), so this only matters if a MarginSnap
+  login tries to connect a second Etsy account's shop — not expected to
+  come up during the beta, revisit if it does.
+
 ## Current status (as of 2026-09-13)
 
 **Security incident, resolved (2026-09-15)**: Supabase's own security

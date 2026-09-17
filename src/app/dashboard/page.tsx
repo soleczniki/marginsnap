@@ -14,6 +14,8 @@ import { formatMoney } from "@/lib/money";
 import { isPeriodKey, periodRange, toDateInputValue, type PeriodKey } from "@/lib/periods";
 import { groupOrdersByDay, aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
 import { resolveCogsForDate } from "@/lib/cogs";
+import { getNotifications } from "@/lib/notifications";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -66,6 +68,9 @@ export default async function Dashboard({
           style={{ fontSize: "0.85rem", color: "var(--muted)" }}
         >
           {isSubscribed ? "Manage billing" : "Upgrade (currently free)"}
+        </a>
+        <a href="/dashboard/listings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Costs
         </a>
         <a href="/dashboard/settings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Settings
@@ -135,6 +140,15 @@ export default async function Dashboard({
     }),
     prisma.listing.findMany({ where: { shopId: shop.id }, include: { cogsEntries: true } }),
   ]);
+
+  // First-time onboarding (2026-09-17): once the first sync has produced at
+  // least one listing, send a not-yet-onboarded shop through the wizard
+  // exactly once — see src/app/dashboard/onboarding/page.tsx. Before that
+  // (no listings yet, still syncing), just show the normal dashboard so
+  // this doesn't get stuck waiting on a redirect target with nothing to show.
+  if (!shop.onboardedAt && listings.length > 0) {
+    redirect("/dashboard/onboarding");
+  }
 
   const listingsMissingCogs = listings.filter((l) => resolveCogsForDate(l.cogsEntries, new Date()) === null).length;
 
@@ -220,18 +234,7 @@ export default async function Dashboard({
           <SyncButton />
         </div>
 
-        {listings.length > 0 && (
-          <div className="card" style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            <span>
-              {listingsMissingCogs > 0
-                ? `${listingsMissingCogs} listing${listingsMissingCogs === 1 ? "" : "s"} still need a cost set before their profit shows.`
-                : "All your listings have a cost set."}
-            </span>
-            <a href="/dashboard/listings" className="button">
-              Manage costs
-            </a>
-          </div>
-        )}
+        <NotificationsPanel notifications={getNotifications({ listingsMissingCogsCount: listingsMissingCogs })} />
 
         <DashboardTabs
           active={viewKey}

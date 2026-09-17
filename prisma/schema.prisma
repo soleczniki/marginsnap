@@ -119,6 +119,14 @@ model Shop {
   lastSyncedAt DateTime?
   createdAt    DateTime  @default(now())
 
+  // First-time onboarding wizard (2026-09-17): VAT status + shipping
+  // net-zero assumption + (for small shops) inline cost entry, shown once
+  // right after the first sync produces at least one listing — see
+  // src/app/dashboard/onboarding/page.tsx. Null = hasn't seen it yet.
+  // Existing shops are backfilled to "now" in the migration so they never
+  // see this retroactively.
+  onboardedAt DateTime?
+
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   listings Listing[]
   orders   Order[]
