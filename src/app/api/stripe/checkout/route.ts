@@ -4,10 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 
-// Starts a Stripe Checkout session for the signed-in user to subscribe.
-// MarginSnap is currently free during early access (Terms of Service §5) —
-// this exists so the "Upgrade" flow works end to end whenever billing is
-// switched on; nothing gates access on subscriptionStatus yet.
+// Starts a Stripe Checkout session for the signed-in user to subscribe —
+// $9/mo, single tier (2026-09-17, Bogdan's call). Reachable any time, trial
+// or not: someone mid-trial can subscribe early, and someone past it lands
+// here from TrialEndedScreen. src/app/api/stripe/webhook/route.ts is what
+// actually flips subscriptionStatus to "active" once checkout completes.
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.user.email) {

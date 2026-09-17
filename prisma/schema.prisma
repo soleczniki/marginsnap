@@ -23,8 +23,29 @@ model User {
 
   // Billing
   stripeCustomerId     String?   @unique
-  subscriptionStatus   String?   // e.g. "trialing" | "active" | "past_due" | "canceled"
+  // "active" is the only status meaning "currently paying" — see
+  // src/lib/billing.ts. "trialing" is unused going forward: the free trial
+  // below is our own, not Stripe's (no card collected up front, Bogdan's
+  // call 2026-09-17), so no Stripe subscription/customer exists at all
+  // until someone actually checks out.
+  subscriptionStatus   String?   // e.g. "active" | "past_due" | "canceled"
   subscriptionPriceId  String?
+
+  // Free trial (2026-09-17, Bogdan's request): 30 days from account
+  // creation — NOT from connecting Etsy — so a slow signup can't quietly
+  // extend it. Set once, in auth.ts's events.createUser. Null only for
+  // accounts that existed before this shipped (grandfathered — never
+  // gated, see src/lib/billing.ts's getBillingStatus).
+  trialEndsAt DateTime?
+  // Which of the countdown-email stages (14/10/7/5/3/1 days left) have
+  // already been sent, as their day-count strings — see
+  // src/app/api/cron/trial-reminders/route.ts. Prevents double-sending if
+  // that cron ever runs twice in a day.
+  trialReminderStagesSent String[] @default([])
+  // Last time the post-trial "still want MarginSnap?" nag went out —
+  // repeated every ~3 weeks for as long as the trial's over and they
+  // haven't subscribed. Null = never sent one yet.
+  lastRenewalReminderAt DateTime?
 
   accounts Account[]
   sessions Session[]

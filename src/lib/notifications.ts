@@ -14,8 +14,25 @@ export interface AppNotification {
   ctaHref: string;
 }
 
-export function getNotifications(input: { listingsMissingCogsCount: number }): AppNotification[] {
+export function getNotifications(input: {
+  listingsMissingCogsCount: number;
+  /** Days left in the free trial, or null when there's nothing to count
+   * down (already paying, or grandfathered — see src/lib/billing.ts).
+   * Trial-ended itself isn't a notification — TrialEndedScreen replaces
+   * the whole dashboard by then, so this only ever fires while trialActive. */
+  trialDaysLeft?: number | null;
+}): AppNotification[] {
   const notifications: AppNotification[] = [];
+
+  if (input.trialDaysLeft !== null && input.trialDaysLeft !== undefined && input.trialDaysLeft >= 0) {
+    const d = input.trialDaysLeft;
+    notifications.push({
+      id: "trial-countdown",
+      message: d === 0 ? "Your free trial ends today." : `${d} day${d === 1 ? "" : "s"} left in your free trial.`,
+      ctaLabel: "Subscribe — $9/mo",
+      ctaHref: "/api/stripe/checkout",
+    });
+  }
 
   if (input.listingsMissingCogsCount > 0) {
     const n = input.listingsMissingCogsCount;

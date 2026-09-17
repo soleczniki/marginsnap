@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { CogsEditor, type CogsEntrySummary } from "@/components/CogsEditor";
 import { DefaultShippingCostEditor } from "@/components/DefaultShippingCostEditor";
 import { resolveCogsForDate } from "@/lib/cogs";
+import { getBillingStatus } from "@/lib/billing";
+import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 
 // "Manage costs" (Blueprint workflow §2) — the screen the rest of the app has
 // been pointing at ("that entry screen is next up"). Type in what each item
@@ -16,8 +18,37 @@ export default async function ManageCosts() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
 
-  const shop = await prisma.shop.findFirst({ where: { userId: session.user.id } });
+  const [shop, user] = await Promise.all([
+    prisma.shop.findFirst({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id } }),
+  ]);
   if (!shop) redirect("/dashboard");
+
+  // This page is reachable directly by URL, not just via the dashboard —
+  // needs its own trial-expired check rather than relying on the dashboard
+  // having already gated it (see src/lib/billing.ts).
+  if (getBillingStatus(user).trialExpired) {
+    return (
+      <>
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "16px 24px",
+            borderBottom: "1px solid var(--line)",
+            marginBottom: 24,
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>MarginSnap</span>
+          <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+            Sign out
+          </a>
+        </header>
+        <TrialEndedScreen />
+      </>
+    );
+  }
 
   const [listings, mostRecentOrder] = await Promise.all([
     prisma.listing.findMany({

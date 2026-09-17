@@ -62,13 +62,17 @@ Practically: nothing about `feeEngine.ts` should ever need to change to
 support a new data source — only a new adapter gets written, and only the
 Etsy one is real work for v1.
 
-## No billing yet
+## Billing & free trial (2026-09-17, Bogdan's decisions)
 
-Stripe fields exist in the Prisma schema and `src/lib/stripe.ts` /
-`src/app/api/stripe/*` routes exist in the scaffold, wired but inert. Leave
-them alone until someone actually wants to pay. Don't extend, don't wire up
-checkout flows, don't add pricing logic — that's explicitly out of scope
-until it's needed.
+$9/mo, single tier, no free-during-beta option. 30-day free trial, no card
+collected up front, starting **at signup** (not at Etsy-connect) so a slow
+setup can't quietly extend it. See "Billing/trial system shipped" under
+Current status for the full build. Still needed from Bogdan before this
+actually charges anyone: the real (non-test) Stripe Price ID as
+`STRIPE_PRICE_ID`, and a webhook endpoint set up in the Stripe dashboard
+(see `src/app/api/stripe/webhook/route.ts`'s header comment) with its
+signing secret as `STRIPE_WEBHOOK_SECRET`. Both need redoing when switching
+from Stripe test mode to live mode — see "Before beta launch" below.
 
 ## Backlog
 
@@ -346,12 +350,85 @@ listing that already had a `cogsAmount`, positioned before the
 `DROP COLUMN cogsAmount` — so no seller's existing cost was lost in the
 migration.
 
-**Not yet built** — explicitly deferred, not forgotten: a first-time
-onboarding flow, right after connecting an Etsy shop, that asks the seller
-directly for VAT status, the shipping net-zero assumption, and (by design,
-extensibly) whatever similar per-shop settings get added later — rather
-than leaving sellers to discover `/dashboard/settings` on their own. This is
-its own, larger piece of work; needs its own scoping pass before starting.
+**Onboarding wizard + notifications + nav reorg (2026-09-17)**: shipped.
+First-time wizard (`/dashboard/onboarding`) asks VAT status, the shipping
+net-zero assumption, and — for small shops — lets sellers enter costs
+inline instead of just being told to go do it later; gated on
+`Shop.onboardedAt` (null = hasn't seen it, only shown once the first sync
+has produced ≥1 listing; existing shops backfilled so they never see it
+retroactively). "Manage Costs" moved out of the dashboard card into
+settings/nav. A generic notification system (`src/lib/notifications.ts` +
+`NotificationsPanel.tsx`) replaced the old hardcoded "listings missing
+cost" card — computed fresh per page load from live data, nothing stored.
+
+**Sellerboard-style table redesign (2026-09-17)**: shipped. Both Orders and
+Products moved from card layouts to real `<table>` markup with proper
+columns (`OrdersTable.tsx`, `ProductsTable.tsx`) — Orders flattened from
+day-grouped cards to one row per order (day-subtotal grouping dropped for
+simplicity, revisitable); Products keeps Product/Units/Revenue/Fees/
+Shipping/Cost/Profit columns. Mobile fallback is horizontal scroll, not a
+second stacked layout — a deliberate simplicity tradeoff for now. The old
+`OrderRow.tsx`/`DayGroup.tsx` are unused but left in place pending an OK to
+delete. Investigated whether line-item profit allocates fees/shipping
+correctly (it was assumed buggy) — it already did, via
+`aggregateByListing`'s proportional revenue-share allocation; no fix
+needed, just a stale comment cleaned up.
+
+**Magic-link sign-in bug**: fixed for real (2026-09-17) — see the Backlog
+entry above for the original hypothesis; the intermediate
+`/auth/confirm?u=<real url>` page (`src/app/auth/confirm/page.tsx`,
+wired via `sendVerificationRequest` in `src/lib/auth.ts`) is now live, so a
+scanner's pre-fetch of the emailed link no longer burns the real token —
+only a real client-side click does.
+
+**Billing/trial system shipped (2026-09-17)**: the full free-trial +
+paywall + reminder-email system described under "Billing & free trial"
+above.
+- `User.trialEndsAt` set once, in `auth.ts`'s `events.createUser` (fires
+  only on first sign-in ever, i.e. brand-new account) — 30 days from then,
+  independent of Etsy-connect. Null = grandfathered (pre-dates this
+  feature), never gated — same pattern as `Shop.onboardedAt`.
+- `src/lib/billing.ts`'s `getBillingStatus()` is the single source of truth
+  every dashboard-area page calls — currently wired into `/dashboard` and
+  `/dashboard/listings` (the latter needs its own check since it's
+  reachable directly by URL, not just via the dashboard). Any *new*
+  dashboard-area page needs the same check.
+- Trial-expired gate: `TrialEndedScreen.tsx` replaces the whole page (data
+  stays intact, nothing's deleted) once `trialExpired` is true.
+- Trial countdown surfaced at the top of the dashboard via the existing
+  notification panel (`getNotifications`'s new `trialDaysLeft` param) —
+  shows days left + a "Subscribe — $9/mo" CTA whenever the trial is active.
+- **Stripe webhook gap discovered and fixed**: `/api/stripe/webhook` didn't
+  exist anywhere before this — meaning a completed Stripe Checkout never
+  actually updated `subscriptionStatus`. Built from scratch
+  (`src/app/api/stripe/webhook/route.ts`): handles
+  `checkout.session.completed` (sets `stripeCustomerId` +
+  `subscriptionStatus: "active"`), `customer.subscription.created`/
+  `updated` (keeps `subscriptionStatus`/`subscriptionPriceId` synced), and
+  `customer.subscription.deleted` (sets `"canceled"`). **Needs setting up
+  in the Stripe dashboard before it does anything** — see its header
+  comment and "Billing & free trial" above.
+- Reminder emails via a new daily cron, `/api/cron/trial-reminders`
+  (added to `vercel.json` alongside the existing `sync` cron; same
+  `Bearer $CRON_SECRET` auth pattern): countdown emails at 14/10/7/5/3/1
+  days left (`User.trialReminderStagesSent` tracks which stages already
+  fired, so a cron that runs twice in a day can't double-send), then a
+  "still want MarginSnap?" renewal nag repeated every ~21 days once the
+  trial's over and they haven't subscribed (`User.lastRenewalReminderAt`).
+  Emails sent via a new shared helper, `src/lib/email.ts`, reusing the same
+  `EMAIL_SERVER_*` SMTP env vars `auth.ts` already uses.
+- Migration needed: adds `User.trialEndsAt`, `trialReminderStagesSent`
+  (defaults to `[]`), `lastRenewalReminderAt` — all either nullable or
+  Postgres-default-backfilled for existing rows, so a plain
+  `npx prisma migrate dev` (no `--create-only` hand-edit) should be safe.
+  **Verify the generated SQL matches this expectation before applying.**
+
+**Not yet built** — explicitly deferred, not forgotten: nothing under this
+heading currently — the onboarding flow that used to be listed here
+shipped 2026-09-17 (see above). The **marketing landing page** for
+marginsnap.app's root URL (currently just the sign-in form, no sales copy)
+is the next big piece of not-yet-built work — see the top of this doc's
+change log / recent conversation for status once that starts.
 
 Known simplifications, documented in the code, not yet product decisions:
 - Multi-quantity billing state (which unit is "the first sold" on a

@@ -12,15 +12,28 @@ import { signIn } from "next-auth/react";
 // — this is just the countdown display, not what actually expires the link.
 const LINK_LIFETIME_SECONDS = 60 * 5;
 
-export function SignInForm() {
+export function SignInForm({
+  title = "MarginSnap",
+  subtitle = "See what you actually made on that sale, in the time it takes to wrap the package.",
+  id,
+}: {
+  /** Overridable so the landing page (2026-09-17) can reuse this exact form
+   * — same email/magic-link mechanics, no separate signup flow to build —
+   * with its own heading instead of the bare wordmark. */
+  title?: string;
+  subtitle?: string;
+  /** Anchor id, so a page embedding this more than once (or linking to it
+   * from a nav CTA) has something to scroll to. */
+  id?: string;
+}) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(LINK_LIFETIME_SECONDS);
 
   useEffect(() => {
     if (!sent || secondsLeft <= 0) return;
-    const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearInterval(id);
+    const intervalId = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearInterval(intervalId);
   }, [sent, secondsLeft]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -39,11 +52,9 @@ export function SignInForm() {
   const expired = secondsLeft <= 0;
 
   return (
-    <main style={{ maxWidth: 420, margin: "0 auto", padding: "80px 24px" }}>
-      <h1 style={{ fontSize: "1.6rem", marginBottom: 8 }}>MarginSnap</h1>
-      <p style={{ color: "var(--muted)", marginBottom: 28 }}>
-        See what you actually made on that sale, in the time it takes to wrap the package.
-      </p>
+    <main id={id} style={{ maxWidth: 420, margin: "0 auto", padding: "80px 24px" }}>
+      <h1 style={{ fontSize: "1.6rem", marginBottom: 8 }}>{title}</h1>
+      <p style={{ color: "var(--muted)", marginBottom: 28 }}>{subtitle}</p>
 
       {sent ? (
         <div className="card">

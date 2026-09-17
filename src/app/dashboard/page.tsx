@@ -15,6 +15,8 @@ import { aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/pr
 import { resolveCogsForDate } from "@/lib/cogs";
 import { getNotifications } from "@/lib/notifications";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { getBillingStatus } from "@/lib/billing";
+import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -43,9 +45,9 @@ export default async function Dashboard({
     prisma.user.findUnique({ where: { id: session.user.id } }),
   ]);
 
-  // "active" or "trialing" are the only statuses that mean "currently paying" —
-  // everything else (past_due, canceled, or never subscribed) shows "Upgrade."
-  const isSubscribed = user?.subscriptionStatus === "active" || user?.subscriptionStatus === "trialing";
+  // Single source of truth for trial/paid gating — see src/lib/billing.ts.
+  const billing = getBillingStatus(user);
+  const isSubscribed = billing.isPaying;
 
   const header = (
     <header
@@ -66,7 +68,7 @@ export default async function Dashboard({
           href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
           style={{ fontSize: "0.85rem", color: "var(--muted)" }}
         >
-          {isSubscribed ? "Manage billing" : "Upgrade (currently free)"}
+          {isSubscribed ? "Manage billing" : "Subscribe — $9/mo"}
         </a>
         <a href="/dashboard/listings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Costs
@@ -80,6 +82,19 @@ export default async function Dashboard({
       </div>
     </header>
   );
+
+  // Trial-expired gate (2026-09-17): checked before the "no shop yet" case
+  // too, since the trial clock starts at signup, not at Etsy-connect — a
+  // slow signup that never got to connecting Etsy still burns trial days
+  // and should still see this once it's over, not the "connect Etsy" screen.
+  if (billing.trialExpired) {
+    return (
+      <>
+        {header}
+        <TrialEndedScreen />
+      </>
+    );
+  }
 
   if (!shop) {
     return (
@@ -232,7 +247,12 @@ export default async function Dashboard({
           <SyncButton />
         </div>
 
-        <NotificationsPanel notifications={getNotifications({ listingsMissingCogsCount: listingsMissingCogs })} />
+        <NotificationsPanel
+          notifications={getNotifications({
+            listingsMissingCogsCount: listingsMissingCogs,
+            trialDaysLeft: billing.trialActive ? billing.daysLeft : null,
+          })}
+        />
 
         <DashboardTabs
           active={viewKey}
