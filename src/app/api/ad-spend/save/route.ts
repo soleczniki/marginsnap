@@ -10,6 +10,15 @@ import { prisma } from "@/lib/db";
 // and confirmed, but this still validates independently rather than
 // trusting the client — same "don't rely on the frontend having checked"
 // rule as the cogs route.
+//
+// Upserts on (listingId, periodStart, periodEnd) (2026-09-17, fixing a
+// re-import footgun) rather than always inserting — re-pasting or
+// re-screenshotting a report the seller already saved for this exact
+// listing+period now corrects that entry's amount instead of quietly
+// creating a second row that profitability.ts would sum on top of the
+// first, silently doubling that listing's ad spend. Two different (even
+// overlapping) periods for the same listing are still both kept, since
+// that's the normal case for e.g. weekly imports inside one dashboard month.
 const MAX_PERIOD_DAYS = 400; // generous — Etsy's own Ads stats page doesn't offer year-long ranges, this just guards against an obviously wrong date pair
 const VALID_SOURCES = new Set(["paste", "screenshot", "manual"]);
 
@@ -84,16 +93,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "none of those rows matched a listing in this shop" }, { status: 400 });
   }
 
-  await prisma.adSpendEntry.createMany({
-    data: toSave.map((c) => ({
-      listingId: c.listingId,
-      periodStart,
-      periodEnd,
-      amountSpent: c.amountSpent,
-      currency: c.currency,
-      source,
-    })),
-  });
+  // (listingId, periodStart, periodEnd) is now the unique key for one entry
+  // (see schema.prisma), so two rows in the SAME save that landed on the
+  // same listing (e.g. the seller manually picked one listing twice) are
+  // combined here rather than the second silently overwriting the first
+  // inside the upsert loop below.
+  const combinedByListing = new Map<string, { amountSpent: number; currency: string | null }>();
+  for (const c of toSave) {
+    const prev = combinedByListing.get(c.listingId);
+    combinedByListing.set(c.listingId, {
+      amountSpent: (prev?.amountSpent ?? 0) + c.amountSpent,
+      currency: prev?.currency ?? c.currency,
+    });
+  }
+  const toUpsert = [...combinedByListing.entries()].map(([listingId, v]) => ({ listingId, ...v }));
 
-  return NextResponse.json({ ok: true, savedCount: toSave.length, skippedCount });
+  // Which of these (listing, period) keys already have an entry — used only
+  // to tell the seller create vs. correct counts afterwards; the upsert
+  // below is what actually prevents the duplicate regardless of this.
+  const existing = await prisma.adSpendEntry.findMany({
+    where: { periodStart, periodEnd, listingId: { in: toUpsert.map((c) => c.listingId) } },
+    select: { listingId: true },
+  });
+  const alreadyHadEntry = new Set(existing.map((e) => e.listingId));
+
+  await prisma.$transaction(
+    toUpsert.map((c) =>
+      prisma.adSpendEntry.upsert({
+        where: { listingId_periodStart_periodEnd: { listingId: c.listingId, periodStart, periodEnd } },
+        create: { listingId: c.listingId, periodStart, periodEnd, amountSpent: c.amountSpent, currency: c.currency, source },
+        update: { amountSpent: c.amountSpent, currency: c.currency, source },
+      })
+    )
+  );
+
+  const updatedCount = toUpsert.filter((c) => alreadyHadEntry.has(c.listingId)).length;
+  const createdCount = toUpsert.length - updatedCount;
+
+  return NextResponse.json({ ok: true, savedCount: toUpsert.length, createdCount, updatedCount, skippedCount });
 }

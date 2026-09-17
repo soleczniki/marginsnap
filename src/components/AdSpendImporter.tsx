@@ -29,6 +29,20 @@ interface ParseResponse {
   confidentColumnMatch: boolean;
 }
 
+export interface ExistingAdSpendEntry {
+  id: string;
+  periodStart: string; // YYYY-MM-DD
+  periodEnd: string; // YYYY-MM-DD
+  amountSpent: number;
+  currency: string | null;
+}
+
+/** Plain YYYY-MM-DD strings compare correctly with `<=`/`>=` since they're
+ * already in big-endian order — no Date parsing needed for either check. */
+function periodsOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
+  return aStart <= bEnd && aEnd >= bStart;
+}
+
 // Ad spend import (2026-09-17, Bogdan's request) — two ways to get Etsy's
 // own per-listing Ads spend numbers into MarginSnap without ever touching
 // Etsy's site programmatically: paste the copied stats table as text, or
@@ -37,7 +51,22 @@ interface ParseResponse {
 // misread number would otherwise silently distort profit. See
 // schema.prisma's AdSpendEntry comment and src/lib/adSpendImport.ts /
 // adSpendVision.ts for how each path gets to this same shape.
-export function AdSpendImporter({ listings, currency }: { listings: ListingOption[]; currency: string | null }) {
+export function AdSpendImporter({
+  listings,
+  currency,
+  existingByListing,
+}: {
+  listings: ListingOption[];
+  currency: string | null;
+  // Every existing AdSpendEntry for this shop, grouped by listingId — lets
+  // the review table warn when the period about to be saved either exactly
+  // matches one of these (saving will correct it — the /api/ad-spend/save
+  // upsert handles that case) or merely OVERLAPS one, e.g. a week within a
+  // month that was already imported (the upsert does NOT dedupe that case,
+  // since two different periods for one listing are usually legitimate —
+  // the seller has to decide, and can delete the redundant one right here).
+  existingByListing: Record<string, ExistingAdSpendEntry[]>;
+}) {
   const [tab, setTab] = useState<"paste" | "screenshot">("paste");
   const [pasteText, setPasteText] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -50,8 +79,29 @@ export function AdSpendImporter({ listings, currency }: { listings: ListingOptio
   const [source, setSource] = useState<"paste" | "screenshot">("paste");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  // Existing entries the seller has deleted right from this review screen's
+  // overlap warning — removed from consideration immediately (before
+  // router.refresh() catches up) so the warning clears without a round trip.
+  const [deletedExistingIds, setDeletedExistingIds] = useState<Set<string>>(new Set());
+  const [deletingExistingId, setDeletingExistingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  async function handleDeleteExisting(id: string) {
+    if (!confirm("Delete this existing ad spend entry? This can't be undone.")) return;
+    setDeletingExistingId(id);
+    try {
+      const res = await fetch(`/api/ad-spend/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert("couldn't delete that entry — try again");
+        return;
+      }
+      setDeletedExistingIds((prev) => new Set(prev).add(id));
+      router.refresh();
+    } finally {
+      setDeletingExistingId(null);
+    }
+  }
 
   function applyParseResponse(data: ParseResponse, sourceUsed: "paste" | "screenshot") {
     setRows(
@@ -176,7 +226,10 @@ export function AdSpendImporter({ listings, currency }: { listings: ListingOptio
         alert(data?.error ?? "couldn't save that — try again");
         return;
       }
-      setSavedMessage(`Saved ad spend for ${data.savedCount} listing${data.savedCount === 1 ? "" : "s"}.`);
+      const parts: string[] = [];
+      if (data.createdCount) parts.push(`${data.createdCount} new`);
+      if (data.updatedCount) parts.push(`${data.updatedCount} corrected (already had an amount for that exact period)`);
+      setSavedMessage(`Saved ad spend for ${data.savedCount} listing${data.savedCount === 1 ? "" : "s"}${parts.length ? ` — ${parts.join(", ")}` : ""}.`);
       resetImporter();
       router.refresh();
     } finally {
@@ -300,41 +353,78 @@ export function AdSpendImporter({ listings, currency }: { listings: ListingOptio
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td style={{ padding: "6px 8px", color: "var(--muted)" }}>{row.rawLabel}</td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <select
-                        value={row.listingId ?? ""}
-                        onChange={(e) => updateRow(i, { listingId: e.target.value || null })}
-                        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--ink)", maxWidth: 220 }}
-                      >
-                        <option value="">— choose a listing —</option>
-                        {listings.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.title}
-                          </option>
+                {rows.map((row, i) => {
+                  const candidates = (row.listingId ? existingByListing[row.listingId] : undefined)?.filter(
+                    (e) => !deletedExistingIds.has(e.id)
+                  );
+                  const exactMatch =
+                    candidates && periodStart && periodEnd
+                      ? candidates.find((e) => e.periodStart === periodStart && e.periodEnd === periodEnd)
+                      : undefined;
+                  const otherOverlaps =
+                    candidates && periodStart && periodEnd
+                      ? candidates.filter((e) => e.id !== exactMatch?.id && periodsOverlap(periodStart, periodEnd, e.periodStart, e.periodEnd))
+                      : [];
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
+                      <td style={{ padding: "6px 8px", color: "var(--muted)" }}>
+                        {row.rawLabel}
+                        {exactMatch && (
+                          <div style={{ color: "var(--loss)", fontSize: "0.78rem", marginTop: 2 }}>
+                            Already have {currencySymbol(exactMatch.currency ?? currency)}
+                            {exactMatch.amountSpent.toFixed(2)} saved for this exact period — saving will replace it.
+                          </div>
+                        )}
+                        {otherOverlaps.map((e) => (
+                          <div key={e.id} style={{ color: "var(--loss)", fontSize: "0.78rem", marginTop: 2 }}>
+                            Overlaps an existing {currencySymbol(e.currency ?? currency)}
+                            {e.amountSpent.toFixed(2)} entry for {e.periodStart} → {e.periodEnd}. If this new number already
+                            includes that period, both will be counted otherwise —{" "}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteExisting(e.id)}
+                              disabled={deletingExistingId === e.id}
+                              style={{ color: "inherit", background: "none", border: "none", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}
+                            >
+                              {deletingExistingId === e.id ? "deleting…" : "delete the old one"}
+                            </button>
+                            .
+                          </div>
                         ))}
-                      </select>
-                    </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <span style={{ color: "var(--muted)", marginRight: 4 }}>{currencySymbol(row.currency ?? currency)}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={row.amountSpent}
-                        onChange={(e) => updateRow(i, { amountSpent: Number(e.target.value) })}
-                        style={{ width: 80, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--ink)" }}
-                      />
-                    </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <button type="button" onClick={() => removeRow(i)} style={{ color: "var(--loss)", background: "none", border: "none", cursor: "pointer" }}>
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ padding: "6px 8px" }}>
+                        <select
+                          value={row.listingId ?? ""}
+                          onChange={(e) => updateRow(i, { listingId: e.target.value || null })}
+                          style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--ink)", maxWidth: 220 }}
+                        >
+                          <option value="">— choose a listing —</option>
+                          {listings.map((l) => (
+                            <option key={l.id} value={l.id}>
+                              {l.title}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{ padding: "6px 8px" }}>
+                        <span style={{ color: "var(--muted)", marginRight: 4 }}>{currencySymbol(row.currency ?? currency)}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={row.amountSpent}
+                          onChange={(e) => updateRow(i, { amountSpent: Number(e.target.value) })}
+                          style={{ width: 80, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--ink)" }}
+                        />
+                      </td>
+                      <td style={{ padding: "6px 8px" }}>
+                        <button type="button" onClick={() => removeRow(i)} style={{ color: "var(--loss)", background: "none", border: "none", cursor: "pointer" }}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

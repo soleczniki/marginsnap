@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AdSpendImporter } from "@/components/AdSpendImporter";
+import { RecentAdSpendEntries } from "@/components/RecentAdSpendEntries";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
-import { formatMoney } from "@/lib/money";
 
 // Ad spend (2026-09-17, Bogdan's request) — separate from "Manage costs"
 // since it isn't a per-listing constant the way COGS/shipping are, it's a
@@ -46,7 +46,7 @@ export default async function AdSpend() {
     );
   }
 
-  const [listings, mostRecentOrder, recentEntries] = await Promise.all([
+  const [listings, mostRecentOrder, recentEntries, existingEntries] = await Promise.all([
     prisma.listing.findMany({ where: { shopId: shop.id }, orderBy: { title: "asc" }, select: { id: true, title: true } }),
     prisma.order.findFirst({ where: { shopId: shop.id }, orderBy: { orderDate: "desc" }, select: { currency: true } }),
     prisma.adSpendEntry.findMany({
@@ -55,8 +55,33 @@ export default async function AdSpend() {
       take: 50,
       include: { listing: { select: { title: true } } },
     }),
+    // Every existing entry for this shop, grouped by listing — lets
+    // AdSpendImporter warn on the review screen when the period the seller
+    // is about to save either exactly matches one of these (saving will
+    // correct it, via the /api/ad-spend/save upsert) or merely OVERLAPS one
+    // (e.g. a week within a month already imported) — that second case the
+    // upsert does NOT dedupe, since it's usually legitimate, so the seller
+    // needs to see it and decide whether to delete the now-redundant one.
+    prisma.adSpendEntry.findMany({
+      where: { listing: { shopId: shop.id } },
+      select: { id: true, listingId: true, periodStart: true, periodEnd: true, amountSpent: true, currency: true },
+    }),
   ]);
   const currency = mostRecentOrder?.currency ?? null;
+
+  const existingByListing: Record<
+    string,
+    { id: string; periodStart: string; periodEnd: string; amountSpent: number; currency: string | null }[]
+  > = {};
+  for (const e of existingEntries) {
+    (existingByListing[e.listingId] ??= []).push({
+      id: e.id,
+      periodStart: e.periodStart.toISOString().slice(0, 10),
+      periodEnd: e.periodEnd.toISOString().slice(0, 10),
+      amountSpent: Number(e.amountSpent),
+      currency: e.currency,
+    });
+  }
 
   return (
     <>
@@ -90,28 +115,21 @@ export default async function AdSpend() {
         {listings.length === 0 ? (
           <p style={{ color: "var(--muted)" }}>No listings synced yet — go back to the dashboard and click &ldquo;Sync now.&rdquo;</p>
         ) : (
-          <AdSpendImporter listings={listings} currency={currency} />
+          <AdSpendImporter listings={listings} currency={currency} existingByListing={existingByListing} />
         )}
 
         {recentEntries.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Recently added</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {recentEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="card"
-                  style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 12px", fontSize: "0.85rem" }}
-                >
-                  <span>{entry.listing.title}</span>
-                  <span style={{ color: "var(--muted)" }}>
-                    {entry.periodStart.toISOString().slice(0, 10)} → {entry.periodEnd.toISOString().slice(0, 10)}
-                  </span>
-                  <span>{formatMoney(Number(entry.amountSpent), entry.currency ?? currency)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <RecentAdSpendEntries
+            entries={recentEntries.map((e) => ({
+              id: e.id,
+              listingTitle: e.listing.title,
+              periodStart: e.periodStart.toISOString().slice(0, 10),
+              periodEnd: e.periodEnd.toISOString().slice(0, 10),
+              amountSpent: Number(e.amountSpent),
+              currency: e.currency,
+            }))}
+            fallbackCurrency={currency}
+          />
         )}
       </main>
     </>

@@ -208,6 +208,16 @@ model Listing {
 // pick arbitrary date ranges too. Overlap with a given dashboard period
 // (not exact containment) is what profitability.ts sums per listing — see
 // its comment for why proration wasn't worth the complexity for v1.
+//
+// @@unique([listingId, periodStart, periodEnd]) (2026-09-17, fixing a
+// re-import footgun) makes "the same listing, the exact same period" the
+// natural key for one report — re-pasting or re-screenshotting a report you
+// already saved corrects that entry's amount instead of quietly adding a
+// second one that profitability.ts would then sum on top of the first,
+// silently doubling that listing's ad spend. /api/ad-spend/save upserts on
+// this key. Two DIFFERENT (even overlapping) periods for the same listing
+// are still both kept, on purpose — sellers importing e.g. weekly reports
+// inside one dashboard month is the normal case, not a duplicate.
 model AdSpendEntry {
   id          String   @id @default(cuid())
   listingId   String
@@ -219,10 +229,14 @@ model AdSpendEntry {
   // around for support/debugging, not shown as anything load-bearing in the UI.
   source      String
   createdAt   DateTime @default(now())
+  // Bumped by the upsert in /api/ad-spend/save whenever a re-import
+  // corrects an existing entry's amount rather than creating a new one —
+  // lets "Recently added" show a row as corrected rather than newly added.
+  updatedAt   DateTime @updatedAt
 
   listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
-  @@index([listingId, periodStart, periodEnd])
+  @@unique([listingId, periodStart, periodEnd])
   @@map("ad_spend_entries")
 }
 
