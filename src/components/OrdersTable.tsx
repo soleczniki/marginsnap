@@ -10,6 +10,9 @@ export interface OrderRowItem {
   quantity: number;
   /** Etsy's listing photo (75x75), or null — see Listing.imageUrl. */
   imageUrl: string | null;
+  /** For linking the thumbnail straight to the live Etsy listing
+   * (2026-09-18, Bogdan's request) — see ProductAggregate.etsyListingId. */
+  etsyListingId: string;
 }
 
 export interface OrderTableRow {
@@ -57,6 +60,16 @@ const thumbPlaceholderStyle: CSSProperties = {
   ...thumbStyle,
   background: "var(--surface-2)",
   border: "1px solid var(--line)",
+};
+// Thumbnail+title → live Etsy listing, new tab (2026-09-18, Bogdan's
+// request). color/textDecoration reset so it reads as normal row content,
+// not a typical blue underlined link.
+const listingLinkStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 8,
+  color: "inherit",
+  textDecoration: "none",
 };
 const expandButtonStyle: CSSProperties = {
   display: "inline-flex",
@@ -164,20 +177,29 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
       <tr>
         <td style={tdStyle}>{order.orderDate.toLocaleDateString()}</td>
         <td style={tdStyle}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            {order.items[0]?.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Etsy-hosted
-              // thumbnail, not a local/optimizable asset; next/image would need
-              // this exact host allow-listed in next.config.js for no real gain.
-              <img src={order.items[0].imageUrl} alt="" style={thumbStyle} />
-            ) : (
-              <div style={thumbPlaceholderStyle} />
-            )}
-            <div>
-              <div>#{order.receiptId}</div>
-              {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
-            </div>
-          </div>
+          {order.items[0] ? (
+            <a
+              href={`https://www.etsy.com/listing/${order.items[0].etsyListingId}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              style={listingLinkStyle}
+            >
+              {order.items[0].imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Etsy-hosted
+                // thumbnail, not a local/optimizable asset; next/image would need
+                // this exact host allow-listed in next.config.js for no real gain.
+                <img src={order.items[0].imageUrl} alt="" style={thumbStyle} />
+              ) : (
+                <div style={thumbPlaceholderStyle} />
+              )}
+              <div>
+                <div>#{order.receiptId}</div>
+                {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
+              </div>
+            </a>
+          ) : (
+            <div>#{order.receiptId}</div>
+          )}
         </td>
         <td style={tdNumStyle}>{money(order.grossAmount)}</td>
         <td style={tdNumStyle}>

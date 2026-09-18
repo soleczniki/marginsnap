@@ -199,6 +199,7 @@ export default async function Dashboard({
       title: li.listing.title,
       quantity: li.quantity,
       imageUrl: li.listing.imageUrl,
+      etsyListingId: li.listing.etsyListingId.toString(),
     }));
   }
 
@@ -262,16 +263,24 @@ export default async function Dashboard({
         >
           <div>
             <h1 style={{ fontSize: "1.4rem", marginBottom: 4 }}>{shop.shopName ?? "Your shop"}</h1>
-            <p style={{ color: "var(--muted)" }}>
-              {shop.lastSyncedAt
-                ? `Last synced: ${shop.lastSyncedAt.toLocaleString()}`
-                : "Not synced yet — click Sync now, or wait for the daily automatic sync."}
-            </p>
-            <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: 4 }}>
-              {listings.length} listing{listings.length === 1 ? "" : "s"} synced
+          </div>
+          {/* Sync details moved under the button itself (2026-09-18, Bogdan's
+             request) — previously sat under the shop name on the left,
+             disconnected from the button that actually triggers a sync. */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+            <SyncButton />
+            <p style={{ color: "var(--muted)", fontSize: "0.8rem", textAlign: "right", margin: 0 }}>
+              {shop.lastSyncedAt ? (
+                <>
+                  Last synced {shop.lastSyncedAt.toLocaleString()}
+                  <br />
+                  {listings.length} listing{listings.length === 1 ? "" : "s"} synced
+                </>
+              ) : (
+                "Not synced yet — click Sync now, or wait for the daily automatic sync."
+              )}
             </p>
           </div>
-          <SyncButton />
         </div>
 
         <NotificationsPanel

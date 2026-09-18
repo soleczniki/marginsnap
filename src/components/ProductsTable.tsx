@@ -21,6 +21,16 @@ const thumbStyle: CSSProperties = {
   border: "1px solid var(--line)",
 };
 const thumbPlaceholderStyle: CSSProperties = { ...thumbStyle, background: "var(--surface-2)" };
+// Thumbnail+title → live Etsy listing, new tab (2026-09-18, Bogdan's
+// request). color/textDecoration reset so it reads as normal row content,
+// not a typical blue underlined link.
+const listingLinkStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  color: "inherit",
+  textDecoration: "none",
+};
 
 // The per-product profitability view (Phase 2 of PROJECT.md's roadmap),
 // redesigned 2026-09-17 (Bogdan's Sellerboard-style request) from a card
@@ -69,7 +79,12 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
             return (
               <tr key={p.listingId}>
                 <td style={tdStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <a
+                    href={`https://www.etsy.com/listing/${p.etsyListingId}`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    style={listingLinkStyle}
+                  >
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- Etsy-hosted
                       // thumbnail, not a local/optimizable asset.
@@ -78,7 +93,7 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
                       <div style={thumbPlaceholderStyle} />
                     )}
                     <span>{p.title}</span>
-                  </div>
+                  </a>
                 </td>
                 <td style={tdNumStyle}>{p.unitsSold}</td>
                 <td style={tdNumStyle}>{money(p.grossRevenue)}</td>

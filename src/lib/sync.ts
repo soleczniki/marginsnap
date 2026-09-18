@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/crypto";
 import {
   extractUserIdFromAccessToken,
+  getListingImages,
   getShopForUser,
   listActiveListings,
   listReceiptsSince,
@@ -96,12 +97,24 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   let listingsSynced = 0;
   const listingsResponse = await listActiveListings(accessToken, shop.etsyShopId.toString());
   for (const listing of listingsResponse?.results ?? []) {
-    // Thumbnails (2026-09-18): `images` is only present because
-    // listActiveListings now asks for `includes=Images` — Etsy sorts a
-    // listing's images by rank, so [0] is its primary photo. Falls back to
-    // null (never a broken/placeholder URL) when a listing genuinely has no
-    // photo yet, so the UI can render its own empty-state box instead.
-    const imageUrl: string | null = listing.images?.[0]?.url_75x75 ?? null;
+    // Thumbnails (2026-09-18, corrected same day): the shop-listings endpoint
+    // above has no `includes` param at all — an earlier version of this code
+    // tried `includes=Images` on it, which Etsy just silently ignored (no
+    // error, `images` was simply never in the response), so imageUrl stayed
+    // null forever with nothing to signal why. Images only exist behind
+    // their own per-listing endpoint (getListingImages) — one extra call per
+    // listing, acceptable at solo-seller volume. Etsy sorts by rank, so [0]
+    // is the primary photo. Never lets one listing's image call fail the
+    // whole sync — falls back to null (never a broken/placeholder URL) so
+    // the UI's own empty-state box renders instead.
+    let imageUrl: string | null = null;
+    try {
+      const images = await getListingImages(accessToken, listing.listing_id);
+      imageUrl = images?.results?.[0]?.url_75x75 ?? null;
+    } catch {
+      // swallow — a missing/failed image fetch shouldn't block the listing
+      // (or the rest of the sync) from saving.
+    }
     await prisma.listing.upsert({
       where: { shopId_etsyListingId: { shopId: shop.id, etsyListingId: BigInt(listing.listing_id) } },
       create: {

@@ -151,6 +151,11 @@ export interface ProductAggregate {
    * hasn't been re-synced since thumbnails shipped (2026-09-18) — see
    * Listing.imageUrl in schema.prisma. */
   imageUrl: string | null;
+  /** Etsy's numeric listing id (as a string — it's a BigInt in Postgres),
+   * for linking the thumbnail/title straight to the live Etsy listing
+   * (2026-09-18, Bogdan's request) — etsy.com/listing/{id} resolves without
+   * needing the title slug too. */
+  etsyListingId: string;
   unitsSold: number;
   /** This product's item revenue PLUS its allocated share of the order's
    * shipping/gift-wrap (split the same way fees are — see allocatedFees).
@@ -188,6 +193,7 @@ interface Acc {
   title: string;
   sku: string | null;
   imageUrl: string | null;
+  etsyListingId: string;
   unitsSold: number;
   revenueSum: number;
   feesSum: number;
@@ -238,6 +244,7 @@ export function aggregateByListing(
         title: li.listing.title,
         sku: li.listing.sku,
         imageUrl: li.listing.imageUrl,
+        etsyListingId: li.listing.etsyListingId.toString(),
         unitsSold: 0,
         revenueSum: 0,
         feesSum: 0,
@@ -286,6 +293,7 @@ export function aggregateByListing(
       title: acc.title,
       sku: acc.sku,
       imageUrl: acc.imageUrl,
+      etsyListingId: acc.etsyListingId,
       unitsSold: acc.unitsSold,
       grossRevenue,
       allocatedFees,

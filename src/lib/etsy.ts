@@ -137,13 +137,20 @@ export async function getShopForUser(accessToken: string, etsyUserId: string) {
   return etsyGet(`/users/${etsyUserId}/shops`, accessToken);
 }
 
-// `includes=Images` (2026-09-18, thumbnails feature) embeds each listing's
-// `images` array in the same response — no extra per-listing call needed.
-// Per Etsy's docs each entry carries several pre-sized URLs
-// (url_75x75/url_170x135/url_570xN/url_fullxfull); sync.ts picks url_75x75
-// since this only ever renders as a small thumbnail.
 export async function listActiveListings(accessToken: string, shopId: string | bigint, limit = 100, offset = 0) {
-  return etsyGet(`/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}&includes=Images`, accessToken);
+  return etsyGet(`/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}`, accessToken);
+}
+
+// Thumbnails (2026-09-18): findAllActiveListingsByShop (above) does NOT
+// accept an `includes=Images` param — that was tried first and silently did
+// nothing (Etsy just ignores unknown query params rather than erroring,
+// which is why it looked like it worked but never actually populated an
+// image). Images are only available per-listing, via their own endpoint —
+// confirmed against Etsy's v3 reference (developers.etsy.com/documentation/reference/#operation/getListingImages).
+// Returns each image pre-sized (url_75x75/url_170x135/url_570xN/url_fullxfull)
+// plus `rank`; sync.ts takes the rank-1 (primary) photo's url_75x75.
+export async function getListingImages(accessToken: string, listingId: string | bigint) {
+  return etsyGet(`/listings/${listingId}/images`, accessToken);
 }
 
 // "receipts" is Etsy's term for orders. min_created is a Unix timestamp —
