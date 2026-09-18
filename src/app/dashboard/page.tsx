@@ -238,7 +238,7 @@ export default async function Dashboard({
   return (
     <>
       {header}
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
+      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px 80px" }}>
         {searchParams.connected === "1" && (
           <div className="card" style={{ marginBottom: 20, borderColor: "var(--accent)" }}>
             ✅ Etsy shop connected — pulling your listings and orders now.

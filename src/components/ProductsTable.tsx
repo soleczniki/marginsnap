@@ -4,6 +4,10 @@ import type { ProductAggregate } from "@/lib/profitability";
 
 const thStyle: CSSProperties = { padding: "8px 10px", color: "var(--muted)", fontWeight: 600, fontSize: "0.8rem", textAlign: "left" };
 const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(--line)", verticalAlign: "top" };
+// Numeric/money columns (Units, Revenue, Fees, Shipping, Cost, Ad spend,
+// Profit) shouldn't ever wrap mid-value — that's what was making the table
+// look ragged before the dashboard went full-width.
+const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
 
 // The per-product profitability view (Phase 2 of PROJECT.md's roadmap),
 // redesigned 2026-09-17 (Bogdan's Sellerboard-style request) from a card
@@ -52,18 +56,18 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
             return (
               <tr key={p.listingId}>
                 <td style={tdStyle}>{p.title}</td>
-                <td style={tdStyle}>{p.unitsSold}</td>
-                <td style={tdStyle}>{money(p.grossRevenue)}</td>
-                <td style={tdStyle}>
+                <td style={tdNumStyle}>{p.unitsSold}</td>
+                <td style={tdNumStyle}>{money(p.grossRevenue)}</td>
+                <td style={tdNumStyle}>
                   {p.allocatedFees !== null ? money(p.allocatedFees) : <span style={{ color: "var(--muted)" }}>pending</span>}
                 </td>
-                <td style={tdStyle}>
+                <td style={tdNumStyle}>
                   {p.allocatedShipping !== null ? money(p.allocatedShipping) : <span style={{ color: "var(--muted)" }}>—</span>}
                 </td>
-                <td style={tdStyle}>
+                <td style={tdNumStyle}>
                   {p.cogsTotal !== null ? money(p.cogsTotal) : <span style={{ color: "var(--muted)" }}>—</span>}
                 </td>
-                <td style={tdStyle}>
+                <td style={tdNumStyle}>
                   {p.adSpendTotal > 0 ? (
                     money(p.adSpendTotal)
                   ) : (
@@ -72,7 +76,7 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
                     </span>
                   )}
                 </td>
-                <td style={{ ...tdStyle, textAlign: "right" }}>
+                <td style={{ ...tdNumStyle, textAlign: "right" }}>
                   <span className={p.netProfit !== null ? (p.netProfit >= 0 ? "profit-positive" : "profit-negative") : ""}>
                     {profitLabel}
                   </span>

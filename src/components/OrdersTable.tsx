@@ -34,6 +34,10 @@ export interface OrderTableRow {
 
 const thStyle: CSSProperties = { padding: "8px 10px", color: "var(--muted)", fontWeight: 600, fontSize: "0.8rem", textAlign: "left" };
 const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(--line)", verticalAlign: "top" };
+// Numeric/money columns (Revenue, Fees, Shipping, Profit) shouldn't ever
+// wrap mid-value — that's what was making the table look ragged before the
+// dashboard went full-width.
+const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
 const expandButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -143,8 +147,8 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
           <div>#{order.receiptId}</div>
           {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
         </td>
-        <td style={tdStyle}>{money(order.grossAmount)}</td>
-        <td style={tdStyle}>
+        <td style={tdNumStyle}>{money(order.grossAmount)}</td>
+        <td style={tdNumStyle}>
           {hasFees ? (
             <button onClick={() => setExpanded((v) => !v)} aria-expanded={expanded} style={expandButtonStyle}>
               <span>{money(order.feesBreakdown!.totalFees!)}</span>
@@ -156,7 +160,7 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
             <span style={{ color: "var(--muted)" }}>pending</span>
           )}
         </td>
-        <td style={tdStyle}>
+        <td style={tdNumStyle}>
           {order.shippingUnknown && !assumeNetZero ? (
             <button onClick={() => setExpanded(true)} style={linkButtonStyle}>
               add cost
@@ -169,7 +173,7 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
             <span style={{ color: "var(--muted)" }}>—</span>
           )}
         </td>
-        <td style={{ ...tdStyle, textAlign: "right" }}>
+        <td style={{ ...tdNumStyle, textAlign: "right" }}>
           {order.shippingUnknown && !assumeNetZero ? (
             <button onClick={() => setExpanded(true)} style={linkButtonStyle}>
               {order.profitLabel}
