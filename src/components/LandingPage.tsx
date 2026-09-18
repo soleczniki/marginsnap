@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { SignInForm } from "@/components/SignInForm";
+import { Logo } from "@/components/Logo";
 
 // The actual marketing site for marginsnap.app's root URL (2026-09-17,
 // Bogdan's request — "make it sexy, make it sellable"). Before this, a
@@ -190,30 +191,8 @@ export function LandingPage() {
   );
 }
 
-// Wordmark + mark (2026-09-17, replacing the bare "🧵 MarginSnap" text —
-// Bogdan's feedback that the logo "needs work"). The mark is an original
-// price-tag shape, not a copy of any real brand's icon — tags fit both the
-// craft aesthetic and the marketplace/for-sale connotation Bogdan asked
-// for ("shapes reminiscent of Etsy") without borrowing anyone's actual logo.
-function Logo() {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <svg width="26" height="26" viewBox="0 0 26 26" style={{ transform: "rotate(-8deg)" }}>
-        <path
-          d="M2,13 L9,3 L23,3 L23,23 L9,23 Z"
-          fill="var(--warm)"
-          stroke="var(--ink)"
-          strokeWidth="1.2"
-          strokeLinejoin="round"
-        />
-        <circle cx="9" cy="8" r="1.8" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1" />
-      </svg>
-      <span style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
-        Margin<span style={{ color: "var(--warm-ink)" }}>Snap</span>
-      </span>
-    </span>
-  );
-}
+// Logo moved to src/components/Logo.tsx (2026-09-18) so the dashboard
+// header can use the exact same mark instead of drifting from it.
 
 // Small tag-shaped confetti + a soft color blob behind the hero's example
 // card — decorative only, purely to add some warmth/color to what was a

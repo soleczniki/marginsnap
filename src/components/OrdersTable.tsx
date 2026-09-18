@@ -8,6 +8,8 @@ import { ShippingCostEditor } from "@/components/ShippingCostEditor";
 export interface OrderRowItem {
   title: string;
   quantity: number;
+  /** Etsy's listing photo (75x75), or null — see Listing.imageUrl. */
+  imageUrl: string | null;
 }
 
 export interface OrderTableRow {
@@ -38,6 +40,24 @@ const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(-
 // wrap mid-value — that's what was making the table look ragged before the
 // dashboard went full-width.
 const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
+// Thumbnails (2026-09-18, Bogdan's request): a fixed-size box so the row
+// height stays consistent whether or not a given listing has a photo yet —
+// thumbPlaceholderStyle renders the same size when imageUrl is null so an
+// unphotographed listing doesn't collapse the column.
+const thumbSize = 40;
+const thumbStyle: CSSProperties = {
+  width: thumbSize,
+  height: thumbSize,
+  borderRadius: 6,
+  objectFit: "cover",
+  flexShrink: 0,
+  border: "1px solid var(--line)",
+};
+const thumbPlaceholderStyle: CSSProperties = {
+  ...thumbStyle,
+  background: "var(--surface-2)",
+  border: "1px solid var(--line)",
+};
 const expandButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -144,8 +164,20 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
       <tr>
         <td style={tdStyle}>{order.orderDate.toLocaleDateString()}</td>
         <td style={tdStyle}>
-          <div>#{order.receiptId}</div>
-          {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            {order.items[0]?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- Etsy-hosted
+              // thumbnail, not a local/optimizable asset; next/image would need
+              // this exact host allow-listed in next.config.js for no real gain.
+              <img src={order.items[0].imageUrl} alt="" style={thumbStyle} />
+            ) : (
+              <div style={thumbPlaceholderStyle} />
+            )}
+            <div>
+              <div>#{order.receiptId}</div>
+              {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
+            </div>
+          </div>
         </td>
         <td style={tdNumStyle}>{money(order.grossAmount)}</td>
         <td style={tdNumStyle}>

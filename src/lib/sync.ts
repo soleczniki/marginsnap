@@ -96,6 +96,12 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   let listingsSynced = 0;
   const listingsResponse = await listActiveListings(accessToken, shop.etsyShopId.toString());
   for (const listing of listingsResponse?.results ?? []) {
+    // Thumbnails (2026-09-18): `images` is only present because
+    // listActiveListings now asks for `includes=Images` — Etsy sorts a
+    // listing's images by rank, so [0] is its primary photo. Falls back to
+    // null (never a broken/placeholder URL) when a listing genuinely has no
+    // photo yet, so the UI can render its own empty-state box instead.
+    const imageUrl: string | null = listing.images?.[0]?.url_75x75 ?? null;
     await prisma.listing.upsert({
       where: { shopId_etsyListingId: { shopId: shop.id, etsyListingId: BigInt(listing.listing_id) } },
       create: {
@@ -103,9 +109,11 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
         etsyListingId: BigInt(listing.listing_id),
         title: listing.title ?? "Untitled listing",
         sku: listing.skus?.[0] ?? null,
+        imageUrl,
       },
       update: {
         title: listing.title ?? "Untitled listing",
+        imageUrl,
       },
     });
     listingsSynced++;

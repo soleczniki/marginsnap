@@ -137,8 +137,13 @@ export async function getShopForUser(accessToken: string, etsyUserId: string) {
   return etsyGet(`/users/${etsyUserId}/shops`, accessToken);
 }
 
+// `includes=Images` (2026-09-18, thumbnails feature) embeds each listing's
+// `images` array in the same response — no extra per-listing call needed.
+// Per Etsy's docs each entry carries several pre-sized URLs
+// (url_75x75/url_170x135/url_570xN/url_fullxfull); sync.ts picks url_75x75
+// since this only ever renders as a small thumbnail.
 export async function listActiveListings(accessToken: string, shopId: string | bigint, limit = 100, offset = 0) {
-  return etsyGet(`/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}`, accessToken);
+  return etsyGet(`/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}&includes=Images`, accessToken);
 }
 
 // "receipts" is Etsy's term for orders. min_created is a Unix timestamp —

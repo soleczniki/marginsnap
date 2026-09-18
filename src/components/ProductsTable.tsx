@@ -8,6 +8,19 @@ const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(-
 // Profit) shouldn't ever wrap mid-value — that's what was making the table
 // look ragged before the dashboard went full-width.
 const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
+// Thumbnails (2026-09-18, Bogdan's request) — same fixed-size box as
+// OrdersTable.tsx, so a listing with no photo yet still gets a consistent
+// placeholder instead of collapsing the column.
+const thumbSize = 40;
+const thumbStyle: CSSProperties = {
+  width: thumbSize,
+  height: thumbSize,
+  borderRadius: 6,
+  objectFit: "cover",
+  flexShrink: 0,
+  border: "1px solid var(--line)",
+};
+const thumbPlaceholderStyle: CSSProperties = { ...thumbStyle, background: "var(--surface-2)" };
 
 // The per-product profitability view (Phase 2 of PROJECT.md's roadmap),
 // redesigned 2026-09-17 (Bogdan's Sellerboard-style request) from a card
@@ -55,7 +68,18 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
 
             return (
               <tr key={p.listingId}>
-                <td style={tdStyle}>{p.title}</td>
+                <td style={tdStyle}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Etsy-hosted
+                      // thumbnail, not a local/optimizable asset.
+                      <img src={p.imageUrl} alt="" style={thumbStyle} />
+                    ) : (
+                      <div style={thumbPlaceholderStyle} />
+                    )}
+                    <span>{p.title}</span>
+                  </div>
+                </td>
                 <td style={tdNumStyle}>{p.unitsSold}</td>
                 <td style={tdNumStyle}>{money(p.grossRevenue)}</td>
                 <td style={tdNumStyle}>

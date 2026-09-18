@@ -17,6 +17,7 @@ import { getNotifications } from "@/lib/notifications";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
+import { Logo } from "@/components/Logo";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -62,7 +63,7 @@ export default async function Dashboard({
         flexWrap: "wrap",
       }}
     >
-      <span style={{ fontWeight: 700 }}>MarginSnap</span>
+      <Logo />
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <a
           href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
@@ -194,7 +195,11 @@ export default async function Dashboard({
   const products = aggregateByListing(ordersWithItems, assumeNetZero, adSpendByListing);
 
   function toOrderRowItems(order: OrderWithItems): OrderRowItem[] {
-    return order.lineItems.map((li) => ({ title: li.listing.title, quantity: li.quantity }));
+    return order.lineItems.map((li) => ({
+      title: li.listing.title,
+      quantity: li.quantity,
+      imageUrl: li.listing.imageUrl,
+    }));
   }
 
   function toOrderTableRow(order: OrderWithItems): OrderTableRow {

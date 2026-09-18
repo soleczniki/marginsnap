@@ -162,6 +162,13 @@ model Listing {
   etsyListingId BigInt
   title         String
   sku           String?
+  // Etsy's own listing photo (2026-09-18, Bogdan's request for thumbnails in
+  // the Orders/Products tables) — the smallest size Etsy offers (75x75),
+  // since this only ever renders as a small thumbnail. Populated from the
+  // `images` array Etsy returns when listActiveListings is called with
+  // `includes=Images` (see src/lib/etsy.ts / sync.ts); null for a listing
+  // synced before this existed, until its next sync.
+  imageUrl      String?
   // cogsAmount removed 2026-09-16 — replaced by CogsEntry below, a dated
   // history of cost-of-goods values (Bogdan's request: mirror Sellerboard's
   // "apply from today / retroactively for all orders / from a specific

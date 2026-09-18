@@ -147,6 +147,10 @@ export interface ProductAggregate {
   listingId: string;
   title: string;
   sku: string | null;
+  /** Etsy's own listing photo (75x75), or null when the listing has none or
+   * hasn't been re-synced since thumbnails shipped (2026-09-18) — see
+   * Listing.imageUrl in schema.prisma. */
+  imageUrl: string | null;
   unitsSold: number;
   /** This product's item revenue PLUS its allocated share of the order's
    * shipping/gift-wrap (split the same way fees are — see allocatedFees).
@@ -183,6 +187,7 @@ interface Acc {
   listingId: string;
   title: string;
   sku: string | null;
+  imageUrl: string | null;
   unitsSold: number;
   revenueSum: number;
   feesSum: number;
@@ -232,6 +237,7 @@ export function aggregateByListing(
         listingId: li.listingId,
         title: li.listing.title,
         sku: li.listing.sku,
+        imageUrl: li.listing.imageUrl,
         unitsSold: 0,
         revenueSum: 0,
         feesSum: 0,
@@ -279,6 +285,7 @@ export function aggregateByListing(
       listingId: acc.listingId,
       title: acc.title,
       sku: acc.sku,
+      imageUrl: acc.imageUrl,
       unitsSold: acc.unitsSold,
       grossRevenue,
       allocatedFees,
