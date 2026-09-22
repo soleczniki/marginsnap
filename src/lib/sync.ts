@@ -158,6 +158,40 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
     listingsSynced++;
   }
 
+  // ---------- Image backfill for listings no longer "active" (2026-09-22) ----------
+  // Root cause of "thumbnails never appear" for this shop, found via the
+  // logging added above: Etsy's /listings/active returned 0 results this
+  // whole time — nothing wrong with the image-fetch code itself, it simply
+  // never got the chance to run, because every listing already in our DB
+  // has since sold out / expired / been deactivated on Etsy's side, so none
+  // of them show up in the "active" list anymore. Fix: directly retry
+  // getListingImages by listing id for anything already in our DB that's
+  // still missing an image, independent of the active-listings loop above.
+  // getListingImages doesn't care whether a listing is still "active," only
+  // whether it still exists on Etsy — so a sold-out listing's real photo
+  // still comes back, instead of that listing staying stuck on the
+  // placeholder forever just because it's no longer purchasable.
+  const listingsMissingImages = await prisma.listing.findMany({
+    where: { shopId: shop.id, imageUrl: null },
+  });
+  console.log(`sync: backfilling images for ${listingsMissingImages.length} listing(s) missing one`);
+  for (const listing of listingsMissingImages) {
+    try {
+      const images = await getListingImages(accessToken, listing.etsyListingId.toString());
+      const imageUrl = images?.results?.[0]?.url_75x75 ?? null;
+      console.log(`sync: backfill listing ${listing.etsyListingId} (${listing.title}) -> imageUrl=${imageUrl}`);
+      if (imageUrl) {
+        await prisma.listing.update({ where: { id: listing.id }, data: { imageUrl } });
+      }
+    } catch (err) {
+      // Same "never let one listing's image call break anything else" rule
+      // as the loop above — a listing that's been deleted outright on
+      // Etsy's side (not just deactivated) would 404 here forever on every
+      // sync; that's expected and fine, it just stays on the placeholder.
+      console.error(`sync: backfill getListingImages failed for listing ${listing.etsyListingId}:`, err);
+    }
+  }
+
   // ---------- Orders / receipts ----------
   // Always re-fetch a rolling 90-day window — NOT "only receipts created since
   // the last sync". This isn't just about catching new orders: whenever the
