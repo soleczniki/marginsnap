@@ -111,9 +111,24 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
     try {
       const images = await getListingImages(accessToken, listing.listing_id);
       imageUrl = images?.results?.[0]?.url_75x75 ?? null;
-    } catch {
-      // swallow — a missing/failed image fetch shouldn't block the listing
-      // (or the rest of the sync) from saving.
+      if (!imageUrl) {
+        // Not an exception — Etsy answered fine, there's just no usable
+        // image in the shape we expected. Logged as a warning (2026-09-21,
+        // debugging "thumbnails never appear"): the previous version had no
+        // visibility into this case at all, in Vercel's logs or anywhere
+        // else, so a genuinely empty/differently-shaped response and a
+        // network failure looked identical from the outside.
+        console.warn(
+          `getListingImages for listing ${listing.listing_id} returned no url_75x75`,
+          JSON.stringify(images)
+        );
+      }
+    } catch (err) {
+      // Still never lets one listing's image call fail the whole sync — but
+      // now actually logged (2026-09-21), so a real failure shows up as an
+      // Error-level line in Vercel instead of vanishing silently, which is
+      // exactly what made this bug invisible for days.
+      console.error(`getListingImages failed for listing ${listing.listing_id}:`, err);
     }
     await prisma.listing.upsert({
       where: { shopId_etsyListingId: { shopId: shop.id, etsyListingId: BigInt(listing.listing_id) } },
