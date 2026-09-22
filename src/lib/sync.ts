@@ -96,6 +96,12 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
   // ever match a listing, so profit could never be calculated for anyone.)
   let listingsSynced = 0;
   const listingsResponse = await listActiveListings(accessToken, shop.etsyShopId.toString());
+  // Unconditional (2026-09-21, debugging "thumbnails never appear" — the
+  // warn/error logging below this only fires on a bad outcome, so a fully
+  // successful sync produced zero log lines, indistinguishable in Vercel's
+  // logs from "this loop never ran at all." This line always fires, so the
+  // next sync tells us which of those two it actually was.
+  console.log(`sync: Etsy listings/active returned ${listingsResponse?.results?.length ?? 0} result(s)`);
   for (const listing of listingsResponse?.results ?? []) {
     // Thumbnails (2026-09-18, corrected same day): the shop-listings endpoint
     // above has no `includes` param at all — an earlier version of this code
@@ -111,6 +117,11 @@ export async function syncShop(shop: Shop): Promise<{ listingsSynced: number; or
     try {
       const images = await getListingImages(accessToken, listing.listing_id);
       imageUrl = images?.results?.[0]?.url_75x75 ?? null;
+      // Also unconditional, same reasoning as above — a listing that
+      // resolves an imageUrl successfully should still leave a trace, so we
+      // can confirm the happy path actually happened and isn't itself the
+      // gap (e.g. a frontend/rendering issue rather than a sync issue).
+      console.log(`sync: listing ${listing.listing_id} (${listing.title ?? "untitled"}) -> imageUrl=${imageUrl}`);
       if (!imageUrl) {
         // Not an exception — Etsy answered fine, there's just no usable
         // image in the shape we expected. Logged as a warning (2026-09-21,
