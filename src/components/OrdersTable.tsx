@@ -43,11 +43,12 @@ const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(-
 // wrap mid-value — that's what was making the table look ragged before the
 // dashboard went full-width.
 const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
-// Thumbnails (2026-09-18, Bogdan's request): a fixed-size box so the row
-// height stays consistent whether or not a given listing has a photo yet —
-// thumbPlaceholderStyle renders the same size when imageUrl is null so an
+// Thumbnails (2026-09-18, Bogdan's request; enlarged 2026-09-22 — 40px read
+// too small once real photos were actually showing): a fixed-size box so the
+// row height stays consistent whether or not a given listing has a photo yet
+// — thumbPlaceholderStyle renders the same size when imageUrl is null so an
 // unphotographed listing doesn't collapse the column.
-const thumbSize = 40;
+const thumbSize = 56;
 const thumbStyle: CSSProperties = {
   width: thumbSize,
   height: thumbSize,

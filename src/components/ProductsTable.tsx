@@ -8,10 +8,11 @@ const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(-
 // Profit) shouldn't ever wrap mid-value — that's what was making the table
 // look ragged before the dashboard went full-width.
 const tdNumStyle: CSSProperties = { ...tdStyle, whiteSpace: "nowrap" };
-// Thumbnails (2026-09-18, Bogdan's request) — same fixed-size box as
+// Thumbnails (2026-09-18, Bogdan's request; enlarged 2026-09-22 — 40px read
+// too small once real photos were actually showing) — same fixed-size box as
 // OrdersTable.tsx, so a listing with no photo yet still gets a consistent
 // placeholder instead of collapsing the column.
-const thumbSize = 40;
+const thumbSize = 56;
 const thumbStyle: CSSProperties = {
   width: thumbSize,
   height: thumbSize,
