@@ -89,7 +89,9 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
           <h2 style={sectionTitleStyle}>Billing</h2>
           <dl style={dlStyle}>
             <Row label="Status">
-              {billing.isPaying
+              {isSuper
+                ? "Not applicable — the superadmin account is never trial/billing-gated"
+                : billing.isPaying
                 ? "Paying (active subscription)"
                 : billing.trialExpired
                 ? "Trial expired — not paying"
@@ -107,7 +109,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
                 "No Stripe customer yet"
               )}
             </Row>
-            <Row label="Trial ends">{user.trialEndsAt ? user.trialEndsAt.toLocaleString() : "—"}</Row>
+            <Row label="Trial ends">{isSuper ? "—" : user.trialEndsAt ? user.trialEndsAt.toLocaleString() : "—"}</Row>
           </dl>
         </div>
 

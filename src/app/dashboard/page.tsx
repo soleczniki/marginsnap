@@ -96,7 +96,7 @@ export default async function Dashboard({
             Admin
           </a>
         )}
-        <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+        <a href="/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Sign out
         </a>
       </div>

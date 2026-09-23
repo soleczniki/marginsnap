@@ -69,6 +69,13 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/", // the landing page hosts the "enter your email" form
     verifyRequest: "/", // "check your email" state, handled client-side by ?checkEmail=1
+    // Replaces NextAuth's own unstyled sign-out confirmation page
+    // (2026-09-23 — it looked completely out of place next to the rest of
+    // the app) with src/app/auth/signout/page.tsx, styled the same as
+    // every other page here. Anything that still links straight to
+    // /api/auth/signout (there shouldn't be any, but just in case) gets
+    // redirected to this instead of NextAuth's default page.
+    signOut: "/auth/signout",
   },
   callbacks: {
     // Database sessions don't include the user id by default — every route

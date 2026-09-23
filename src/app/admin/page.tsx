@@ -61,9 +61,15 @@ export default async function AdminUsersPage() {
   });
 
   const rows = users.map((user) => ({ user, billing: getBillingStatus(user) }));
-  const payingCount = rows.filter((r) => r.billing.isPaying).length;
-  const trialActiveCount = rows.filter((r) => !r.billing.isPaying && r.billing.trialActive && r.billing.daysLeft !== null).length;
-  const trialExpiredCount = rows.filter((r) => r.billing.trialExpired).length;
+  // The superadmin account is never trial/billing-gated at all — it's
+  // redirected to /admin before billing is even checked (see
+  // dashboard/page.tsx and src/lib/admin.ts) — so its billing status is
+  // meaningless and shouldn't count toward these stats or show a
+  // Trial/Paying badge in the table below.
+  const billableRows = rows.filter((r) => !isSuperAdminEmail(r.user.email));
+  const payingCount = billableRows.filter((r) => r.billing.isPaying).length;
+  const trialActiveCount = billableRows.filter((r) => !r.billing.isPaying && r.billing.trialActive && r.billing.daysLeft !== null).length;
+  const trialExpiredCount = billableRows.filter((r) => r.billing.trialExpired).length;
 
   // Best-effort MRR estimate from the live Price — never blocks the page if
   // STRIPE_PRICE_ID is missing/misconfigured or Stripe can't be reached.
@@ -121,7 +127,7 @@ export default async function AdminUsersPage() {
                     <td style={tdStyle}>{user.createdAt.toLocaleDateString()}</td>
                     <td style={tdStyle}>{shop?.shopName ?? "—"}</td>
                     <td style={tdStyle}>
-                      <StatusBadge billing={billing} />
+                      {isSuper ? <span style={{ color: "var(--muted)" }}>—</span> : <StatusBadge billing={billing} />}
                     </td>
                     <td style={tdStyle}>
                       {user.stripeCustomerId ? (

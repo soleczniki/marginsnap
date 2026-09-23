@@ -134,6 +134,13 @@ convenient, not blocking anything:
   seller-facing notice, and whether "unify" means actually rewriting old
   orders' amounts into the new currency or just flagging that older
   periods used a different one.
+- **2FA** (2026-09-23, Bogdan's request) — add two-factor auth. Worth
+  weighing most for the admin/superadmin accounts specifically
+  (`src/lib/admin.ts` — one account can see every user's billing/shop
+  data), though could apply account-wide. Not scoped yet: no decision made
+  on TOTP vs. email-code vs. something else, or on whether it's required
+  or optional per account. Note it'll need to fit around the existing
+  passwordless magic-link flow (`src/lib/auth.ts`) rather than replace it.
 
 ## Before beta launch — do not forget
 
