@@ -31,6 +31,15 @@ model User {
   subscriptionStatus   String?   // e.g. "active" | "past_due" | "canceled"
   subscriptionPriceId  String?
 
+  // Admin dashboard access (2026-09-23, Bogdan's request) — grants this
+  // account access to /admin (users list, billing/shop detail, live Stripe
+  // data — see src/lib/admin.ts). This flag alone is NOT ownership: exactly
+  // one account is the permanent superadmin, hardcoded by email in
+  // src/lib/admin.ts rather than stored here, so it can never be changed by
+  // editing a database row or by another admin. Only the superadmin can
+  // flip this flag for other users (src/app/api/admin/users/[id]/toggle-admin).
+  isAdmin Boolean @default(false)
+
   // Free trial (2026-09-17, Bogdan's request): 30 days from account
   // creation — NOT from connecting Etsy — so a slow signup can't quietly
   // extend it. Set once, in auth.ts's events.createUser. Null only for

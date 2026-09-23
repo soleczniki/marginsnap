@@ -18,6 +18,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 import { Logo } from "@/components/Logo";
+import { isAdminUser } from "@/lib/admin";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -80,6 +81,11 @@ export default async function Dashboard({
         <a href="/dashboard/settings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Settings
         </a>
+        {isAdminUser(user) && (
+          <a href="/admin" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+            Admin
+          </a>
+        )}
         <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Sign out
         </a>

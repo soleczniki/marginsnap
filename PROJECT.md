@@ -137,14 +137,16 @@ convenient, not blocking anything:
 
 ## Before beta launch — do not forget
 
-- **Switch Stripe from sandbox/test mode to production/live mode.** As of
-  2026-09-17 the Stripe integration (`src/lib/stripe.ts`,
-  `src/app/api/stripe/*`) is still wired to test keys/sandbox. Before any
-  real beta user's card gets charged, swap in live API keys, the live
-  webhook signing secret, and a real (non-test) Price ID for the $9/mo beta
-  plan — and re-test the checkout → webhook → `subscriptionStatus` flow
-  end-to-end against live mode once switched, since test-mode webhooks
-  don't always behave identically.
+- ~~**Switch Stripe from sandbox/test mode to production/live mode.**~~
+  Done — 2026-09-22/23, Bogdan switched the Stripe account to live mode,
+  created the live webhook endpoint (`checkout.session.completed`,
+  `customer.subscription.created/updated/deleted`), and set the live
+  `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID` in Vercel.
+  Verified via a live "Send test event" (signature check passed). Note:
+  any `User.stripeCustomerId` created before this switch (including
+  Bogdan's own, and anything from the old "Lenis res, MB sandbox" Stripe
+  account) won't resolve against the live key — expected, self-corrects
+  the moment that account goes through a real live checkout.
 - **Etsy Commercial Access** — required before anyone other than Bogdan's
   own connected shop can use this (see "Etsy API access — path forward"
   below). **Update 2026-09-17: a previous application was rejected** —
@@ -566,6 +568,32 @@ re-verify before trusting them long-term, Etsy revises these periodically.
 connect + real data confirmed above). Commercial Access (needed before this
 can be the actual multi-seller product) is a separate, not-yet-actioned
 thread — see below.
+
+**Admin dashboard** (2026-09-23, Bogdan's request — "we don't have an admin
+dashboard, I don't see the users, their payments, statuses, invoices"):
+new `/admin` (users list — signed up date, connected shop, trial/paying
+status badge, linked Stripe customer, role) and `/admin/users/[id]` (one
+user's full picture — stored billing fields, shop detail, order/listing
+counts, and LIVE subscriptions + invoices pulled straight from Stripe on
+each load rather than duplicated into our own DB — a stale/unreachable
+`stripeCustomerId`, e.g. from the old sandbox account, shows a plain error
+instead of crashing the page). An "Admin" link appears in the dashboard
+header only for users `isAdminUser` returns true for.
+
+Access model (Bogdan's decision, 2026-09-23): exactly one permanent owner —
+`kolina@kolina.lt`, hardcoded as `SUPERADMIN_EMAIL` in `src/lib/admin.ts`,
+**not** a database flag, so it can't be changed by editing a row or by
+another admin. Everyone else is either a plain user or an "admin"
+(`User.isAdmin`, new column + migration
+`20260923093000_add_user_is_admin`) — admins can see `/admin` but only the
+superadmin can grant/revoke that flag for others, via a button
+(`AdminToggle.tsx`) that posts to
+`/api/admin/users/[id]/toggle-admin`, which re-checks
+`isSuperAdminEmail` server-side independent of the UI. Run
+`npx prisma migrate dev --name add_user_admin_role` (or `migrate deploy`,
+however migrations normally get applied) to actually add the column before
+this works — the migration file is written but hasn't been applied yet as
+of this writing.
 
 ## Etsy API access — path forward
 
