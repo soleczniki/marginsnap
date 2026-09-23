@@ -10,7 +10,7 @@ import { CustomDatePicker } from "@/components/CustomDatePicker";
 import { DashboardTabs, type ViewKey } from "@/components/DashboardTabs";
 import { ProductsTable } from "@/components/ProductsTable";
 import { formatMoney } from "@/lib/money";
-import { isPeriodKey, periodRange, toDateInputValue, type PeriodKey } from "@/lib/periods";
+import { isPeriodKey, periodRange, toDateInputValue, PERIODS, type PeriodKey } from "@/lib/periods";
 import { aggregateByListing, orderCogsFees, type OrderWithItems } from "@/lib/profitability";
 import { resolveCogsForDate } from "@/lib/cogs";
 import { getNotifications } from "@/lib/notifications";
@@ -172,6 +172,17 @@ export default async function Dashboard({
   const assumeNetZero: boolean =
     shippingOverride === "exclude" ? true : shippingOverride === "count" ? false : shop.assumeShippingNetZero;
   const shippingMode: "count" | "exclude" = assumeNetZero ? "exclude" : "count";
+
+  // Plain-language summary of the active filters (2026-09-23, mobile
+  // follow-up — Bogdan noticed that once the filters collapse behind the
+  // "Filters ▾" toggle on mobile, there's no longer any indication of what
+  // period/shipping-mode the table below is actually showing). Shown only
+  // while the panel is collapsed — see globals.css's ".filters-summary".
+  const periodLabel: string =
+    periodKey === "custom"
+      ? `${toDateInputValue(start ?? end)} – ${toDateInputValue(end)}`
+      : PERIODS.find((p) => p.key === periodKey)?.label ?? "Last 30 days";
+  const shippingSummaryLabel = assumeNetZero ? "shipping excluded" : "shipping counted";
 
   const [orders, listings, periodAdSpend, totalAdSpendCount] = await Promise.all([
     prisma.order.findMany({
@@ -339,6 +350,9 @@ export default async function Dashboard({
         <label htmlFor="filters-toggle" className="filters-toggle-label">
           Filters ▾
         </label>
+        <p className="filters-summary">
+          {periodLabel} · {shippingSummaryLabel}
+        </p>
         <div className="filters-panel">
           <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
             <PeriodPicker active={periodKey} shipping={shippingOverride} view={viewKey} />

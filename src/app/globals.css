@@ -222,6 +222,12 @@ a { color: var(--accent-ink); }
 .filters-toggle-label {
   display: none;
 }
+/* Active-filters summary (2026-09-23 follow-up) — desktop already shows the
+   real controls inline, so this stays hidden there; it only exists to fill
+   the gap left by collapsing them on mobile. */
+.filters-summary {
+  display: none;
+}
 @media (max-width: 640px) {
   .filters-toggle-label {
     display: inline-block;
@@ -232,7 +238,18 @@ a { color: var(--accent-ink); }
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface-2);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+  }
+  .filters-summary {
+    display: block;
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0 0 12px;
+  }
+  /* Redundant with the panel once it's open, so it hides the moment the
+     checkbox is checked — same ~ sibling pattern as .filters-panel. */
+  .filters-toggle-checkbox:checked ~ .filters-summary {
+    display: none;
   }
   .filters-panel {
     display: none;
