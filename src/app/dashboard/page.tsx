@@ -19,6 +19,7 @@ import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 import { Logo } from "@/components/Logo";
 import { isAdminUser, isSuperAdminEmail } from "@/lib/admin";
+import { Footer } from "@/components/Footer";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -122,6 +123,7 @@ export default async function Dashboard({
       <>
         {header}
         <TrialEndedScreen />
+        <Footer />
       </>
     );
   }
@@ -140,6 +142,7 @@ export default async function Dashboard({
             Connect Etsy shop
           </a>
         </main>
+        <Footer />
       </>
     );
   }
@@ -409,6 +412,7 @@ export default async function Dashboard({
           <ProductsTable products={products} />
         )}
       </main>
+      <Footer />
     </>
   );
 }

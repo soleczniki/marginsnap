@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
 import { ShippingNetZeroToggle } from "@/components/ShippingNetZeroToggle";
 import { ReconnectShopLink } from "@/components/ReconnectShopLink";
+import { SubpageHeader } from "@/components/SubpageHeader";
+import { Footer } from "@/components/Footer";
 
 // ISO 3166-1 alpha-2 → full name, via the JS runtime's own locale data
 // (Intl.DisplayNames) rather than a hand-maintained country list — covers
@@ -30,21 +32,7 @@ export default async function Settings() {
 
   return (
     <>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px 24px",
-          borderBottom: "1px solid var(--line)",
-          marginBottom: 24,
-        }}
-      >
-        <span style={{ fontWeight: 700 }}>MarginSnap</span>
-        <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-          Sign out
-        </a>
-      </header>
+      <SubpageHeader navId="settings-nav-toggle" />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -98,6 +86,7 @@ export default async function Settings() {
           <ReconnectShopLink />
         </div>
       </main>
+      <Footer />
     </>
   );
 }

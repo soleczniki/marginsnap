@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/money";
 import { stripe } from "@/lib/stripe";
 import { AdminHeader } from "@/components/AdminHeader";
 import { AdminToggle } from "@/components/AdminToggle";
+import { Footer } from "@/components/Footer";
 
 const thStyle: CSSProperties = { padding: "8px 10px", color: "var(--muted)", fontWeight: 600, fontSize: "0.8rem", textAlign: "left" };
 const tdStyle: CSSProperties = { padding: "10px", borderBottom: "1px solid var(--line)", verticalAlign: "top", fontSize: "0.9rem" };
@@ -170,6 +171,7 @@ export default async function AdminUsersPage() {
           </table>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

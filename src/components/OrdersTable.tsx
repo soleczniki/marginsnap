@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState, Fragment, type CSSProperties } from "react";
 import { formatMoney, formatPercent } from "@/lib/money";
 import type { FeeEngineBreakdown } from "@/lib/feeEngine";
 import { ShippingCostEditor } from "@/components/ShippingCostEditor";
@@ -251,33 +251,49 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
       {expanded && (
         <tr>
           <td colSpan={6} style={{ ...tdStyle, background: "var(--surface-2)" }}>
-            {/* className carries the maxWidth now (2026-09-23, mobile fix
-               #8) — the fixed 420px left empty space to the right of this
-               panel once the row was already wide, reading as an extra
-               reason for the table's horizontal scroll. See globals.css's
-               ".fee-breakdown-panel": full-width below 640px. */}
-            <div className="fee-breakdown-panel" style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
+            {/* Rebuilt as a CSS grid, not a flex column (2026-09-23,
+               follow-up to mobile fix #8) — the earlier flex/space-between
+               version stretched to the row's full width (colSpan={6}
+               across a table already widened by other columns), pushing
+               each label to the far left and its number to the far right
+               with a huge gap between them, exactly the opposite of what
+               was wanted. `display: inline-grid` with `max-content`
+               columns sizes this to its own content instead — only as wide
+               as the longest label + longest number, so every number sits
+               right next to its label, and there's no leftover empty
+               background (which is what was reading as "extra scroll"
+               before, though the real scroll driver, wide columns
+               elsewhere in the table, is the title-truncation fix above).
+               globals.css's ".fee-breakdown-panel" just adds a max-width:
+               100% overflow safety net, nothing else. */}
+            <div
+              className="fee-breakdown-panel"
+              style={{ display: "inline-grid", gridTemplateColumns: "max-content max-content", columnGap: 12, rowGap: 6, fontSize: "0.85rem" }}
+            >
               {lines.map((line, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
+                <Fragment key={i}>
                   <span style={{ color: "var(--muted)" }}>{line.label}</span>
-                  <span>{line.amount < 0 ? `-${money(-line.amount)}` : money(line.amount)}</span>
-                </div>
+                  <span style={{ justifySelf: "end" }}>{line.amount < 0 ? `-${money(-line.amount)}` : money(line.amount)}</span>
+                </Fragment>
               ))}
               {hasFees && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600, borderTop: "1px solid var(--line)", paddingTop: 4 }}>
-                  <span>Total fees</span>
-                  <span>-{money(order.feesBreakdown!.totalFees!)}</span>
-                </div>
+                <>
+                  <span style={{ fontWeight: 600, borderTop: "1px solid var(--line)", paddingTop: 6 }}>Total fees</span>
+                  <span style={{ fontWeight: 600, justifySelf: "end", borderTop: "1px solid var(--line)", paddingTop: 6 }}>
+                    -{money(order.feesBreakdown!.totalFees!)}
+                  </span>
+                </>
               )}
               {typeof order.feesBreakdown?.netToSeller === "number" && (
-                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--muted)" }}>
-                  <span>Net to seller (before cost of goods)</span>
-                  <span>{money(order.feesBreakdown.netToSeller)}</span>
-                </div>
+                <>
+                  <span style={{ color: "var(--muted)" }}>Net to seller (before cost of goods)</span>
+                  <span style={{ color: "var(--muted)", justifySelf: "end" }}>{money(order.feesBreakdown.netToSeller)}</span>
+                </>
               )}
               {typeof order.feesBreakdown?.shippingTotal === "number" && order.feesBreakdown.shippingTotal !== 0 && (
                 <div
                   style={{
+                    gridColumn: "1 / -1",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",

@@ -281,18 +281,12 @@ a { color: var(--accent-ink); }
   }
 }
 
-/* ---- Expanded fee-breakdown panel (issue #8) ----------------------------
-   OrdersTable's expanded fee row used a fixed max-width: 420px for its
-   content so it wouldn't stretch full-width on desktop — but that same
-   fixed width left a block of empty space to the right of it once the row
-   was already wide (long titles, nowrap money columns), which read as an
-   extra reason for the table's horizontal scroll. On mobile, let it fill
-   whatever width the row already has instead of adding its own gap. */
+/* ---- Expanded fee-breakdown panel (issue #8, revised 2026-09-23) --------
+   OrdersTable.tsx builds this as `display: inline-grid` now, which already
+   sizes it to its own content (label + number, nothing more) rather than
+   stretching across the row — see that file's comment. This class is just
+   an overflow safety net for an unusually long fee-rate label on a very
+   narrow screen, not the thing doing the sizing. */
 .fee-breakdown-panel {
-  max-width: 420px;
-}
-@media (max-width: 640px) {
-  .fee-breakdown-panel {
-    max-width: 100%;
-  }
+  max-width: 100%;
 }

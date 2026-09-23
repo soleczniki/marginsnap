@@ -6,6 +6,8 @@ import { AdSpendImporter } from "@/components/AdSpendImporter";
 import { RecentAdSpendEntries } from "@/components/RecentAdSpendEntries";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
+import { SubpageHeader } from "@/components/SubpageHeader";
+import { Footer } from "@/components/Footer";
 
 // Ad spend (2026-09-17, Bogdan's request) — separate from "Manage costs"
 // since it isn't a per-listing constant the way COGS/shipping are, it's a
@@ -26,22 +28,9 @@ export default async function AdSpend() {
   if (getBillingStatus(user).trialExpired) {
     return (
       <>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "16px 24px",
-            borderBottom: "1px solid var(--line)",
-            marginBottom: 24,
-          }}
-        >
-          <span style={{ fontWeight: 700 }}>MarginSnap</span>
-          <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-            Sign out
-          </a>
-        </header>
+        <SubpageHeader navId="ad-spend-nav-toggle" />
         <TrialEndedScreen />
+        <Footer />
       </>
     );
   }
@@ -85,21 +74,7 @@ export default async function AdSpend() {
 
   return (
     <>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px 24px",
-          borderBottom: "1px solid var(--line)",
-          marginBottom: 24,
-        }}
-      >
-        <span style={{ fontWeight: 700 }}>MarginSnap</span>
-        <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-          Sign out
-        </a>
-      </header>
+      <SubpageHeader navId="ad-spend-nav-toggle" />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -132,6 +107,7 @@ export default async function AdSpend() {
           />
         )}
       </main>
+      <Footer />
     </>
   );
 }

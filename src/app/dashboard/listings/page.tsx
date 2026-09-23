@@ -7,6 +7,8 @@ import { DefaultShippingCostEditor } from "@/components/DefaultShippingCostEdito
 import { resolveCogsForDate } from "@/lib/cogs";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
+import { SubpageHeader } from "@/components/SubpageHeader";
+import { Footer } from "@/components/Footer";
 
 // "Manage costs" (Blueprint workflow §2) — the screen the rest of the app has
 // been pointing at ("that entry screen is next up"). Type in what each item
@@ -30,22 +32,9 @@ export default async function ManageCosts() {
   if (getBillingStatus(user).trialExpired) {
     return (
       <>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "16px 24px",
-            borderBottom: "1px solid var(--line)",
-            marginBottom: 24,
-          }}
-        >
-          <span style={{ fontWeight: 700 }}>MarginSnap</span>
-          <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-            Sign out
-          </a>
-        </header>
+        <SubpageHeader navId="listings-nav-toggle" />
         <TrialEndedScreen />
+        <Footer />
       </>
     );
   }
@@ -67,21 +56,7 @@ export default async function ManageCosts() {
 
   return (
     <>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px 24px",
-          borderBottom: "1px solid var(--line)",
-          marginBottom: 24,
-        }}
-      >
-        <span style={{ fontWeight: 700 }}>MarginSnap</span>
-        <a href="/api/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-          Sign out
-        </a>
-      </header>
+      <SubpageHeader navId="listings-nav-toggle" />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -152,6 +127,7 @@ export default async function ManageCosts() {
           })}
         </div>
       </main>
+      <Footer />
     </>
   );
 }

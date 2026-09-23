@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { stripe } from "@/lib/stripe";
 import { AdminHeader } from "@/components/AdminHeader";
 import { AdminToggle } from "@/components/AdminToggle";
+import { Footer } from "@/components/Footer";
 
 const sectionTitleStyle: CSSProperties = { fontSize: "1rem", marginBottom: 14 };
 const subTitleStyle: CSSProperties = { fontSize: "0.9rem", color: "var(--muted)", marginBottom: 10 };
@@ -234,6 +235,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
           </div>
         )}
       </main>
+      <Footer />
     </>
   );
 }
