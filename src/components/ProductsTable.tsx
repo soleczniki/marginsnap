@@ -93,7 +93,12 @@ export function ProductsTable({ products }: { products: ProductAggregate[] }) {
                     ) : (
                       <div style={thumbPlaceholderStyle} />
                     )}
-                    <span>{p.title}</span>
+                    {/* Truncated with an ellipsis (2026-09-23, mobile fix
+                       #7) — same as OrdersTable's item titles; full title
+                       via title="". See globals.css's ".truncate-title". */}
+                    <span className="truncate-title" title={p.title}>
+                      {p.title}
+                    </span>
                   </a>
                 </td>
                 <td style={tdNumStyle}>{p.unitsSold}</td>

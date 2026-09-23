@@ -75,7 +75,17 @@ export default async function Dashboard({
       }}
     >
       <Logo />
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      {/* Hamburger nav (2026-09-23, mobile fix #2) — same CSS-only pattern
+         as the landing page nav (LandingPage.tsx), needed even more here
+         since this header can have 5 items vs. the landing page's 3. See
+         globals.css's ".nav-toggle-checkbox"/".nav-links" rules. */}
+      <input type="checkbox" id="dashboard-nav-toggle" className="nav-toggle-checkbox" />
+      <label htmlFor="dashboard-nav-toggle" className="nav-toggle-label" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </label>
+      <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <a
           href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
           style={{ fontSize: "0.85rem", color: "var(--muted)" }}
@@ -268,6 +278,7 @@ export default async function Dashboard({
         )}
 
         <div
+          className="shop-header-row"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -282,8 +293,12 @@ export default async function Dashboard({
           </div>
           {/* Sync details moved under the button itself (2026-09-18, Bogdan's
              request) — previously sat under the shop name on the left,
-             disconnected from the button that actually triggers a sync. */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+             disconnected from the button that actually triggers a sync.
+             className="shop-header-actions" (2026-09-23, mobile fix #5):
+             on mobile this stacks below the shop name and left-aligns —
+             right-aligned text floating alone under a wrapped row read as
+             "out of place" once the row no longer fit on one line. */}
+          <div className="shop-header-actions" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
             <SyncButton />
             <p style={{ color: "var(--muted)", fontSize: "0.8rem", textAlign: "right", margin: 0 }}>
               {shop.lastSyncedAt ? (
@@ -314,24 +329,36 @@ export default async function Dashboard({
           end={periodKey === "custom" ? searchParams.end : undefined}
         />
 
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
-          <PeriodPicker active={periodKey} shipping={shippingOverride} view={viewKey} />
-          <CustomDatePicker
-            active={periodKey === "custom"}
-            start={periodKey === "custom" ? searchParams.start : start ? toDateInputValue(start) : undefined}
-            end={toDateInputValue(end)}
-            shipping={shippingOverride}
-            view={viewKey}
-          />
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <ShippingModeToggle
-            active={shippingMode}
-            period={periodKey}
-            view={viewKey}
-            start={periodKey === "custom" ? searchParams.start : undefined}
-            end={periodKey === "custom" ? searchParams.end : undefined}
-          />
+        {/* Collapsible on mobile (2026-09-23, mobile fix #6) — same
+           checkbox+label disclosure pattern as the nav (globals.css). The
+           checkbox/label/.filters-panel must stay direct siblings for the
+           CSS ~ selector to reach the panel. Desktop is unaffected — the
+           toggle button only renders (via display:none → inline-block)
+           below 640px, and .filters-panel has no display rule above it. */}
+        <input type="checkbox" id="filters-toggle" className="filters-toggle-checkbox" />
+        <label htmlFor="filters-toggle" className="filters-toggle-label">
+          Filters ▾
+        </label>
+        <div className="filters-panel">
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+            <PeriodPicker active={periodKey} shipping={shippingOverride} view={viewKey} />
+            <CustomDatePicker
+              active={periodKey === "custom"}
+              start={periodKey === "custom" ? searchParams.start : start ? toDateInputValue(start) : undefined}
+              end={toDateInputValue(end)}
+              shipping={shippingOverride}
+              view={viewKey}
+            />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <ShippingModeToggle
+              active={shippingMode}
+              period={periodKey}
+              view={viewKey}
+              start={periodKey === "custom" ? searchParams.start : undefined}
+              end={periodKey === "custom" ? searchParams.end : undefined}
+            />
+          </div>
         </div>
 
         {/* Ad spend disclosure (2026-09-17, Bogdan's request): Etsy gives us

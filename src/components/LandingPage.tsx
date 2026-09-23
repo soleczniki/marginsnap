@@ -38,7 +38,16 @@ export function LandingPage() {
         }}
       >
         <Logo />
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        {/* Hamburger nav (2026-09-23, mobile fix #1) — CSS-only, see
+           globals.css's ".nav-toggle-checkbox"/".nav-links" rules. Desktop
+           is unaffected: the checkbox/label are only shown below 640px. */}
+        <input type="checkbox" id="landing-nav-toggle" className="nav-toggle-checkbox" />
+        <label htmlFor="landing-nav-toggle" className="nav-toggle-label" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
+        <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <a href="#pricing" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
             Pricing
           </a>
@@ -184,7 +193,20 @@ export function LandingPage() {
         />
       </section>
 
-      <footer style={{ textAlign: "center", padding: "24px", fontSize: "0.82rem", color: "var(--muted)" }}>
+      {/* Made visually distinct from the section above it (2026-09-23,
+         mobile fix #4 — Bogdan reported no footer visible on mobile; it was
+         already in the markup but blended into the page background with
+         nothing to set it apart once scrolled to). */}
+      <footer
+        style={{
+          textAlign: "center",
+          padding: "24px",
+          fontSize: "0.82rem",
+          color: "var(--muted)",
+          borderTop: "1px solid var(--line)",
+          background: "var(--surface)",
+        }}
+      >
         <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
       </footer>
     </>
@@ -304,25 +326,44 @@ function ProfitExampleCard() {
   );
 }
 
+const COMPARISON_ROWS = [
+  { label: "Setup time", spreadsheet: "Hours, and upkeep every week", others: "Setup for multi-channel teams", marginsnap: "Minutes — connect and go" },
+  { label: "Built for Etsy specifically", spreadsheet: "You look up every fee rule yourself", others: "Etsy is one of many marketplaces supported", marginsnap: "Etsy fees, VAT, and shipping built in" },
+  { label: "Price", spreadsheet: "Free, but costs you hours", others: "$15–$79/mo", marginsnap: "$9/mo, one plan" },
+];
+
+// Real <table> on desktop; below 640px a 4-column table has no room to
+// breathe, so it's swapped for one stacked card per row instead of being
+// left horizontally scrollable (2026-09-23, mobile fix #3 — Bogdan didn't
+// want the scroll at all, not just a nicer scrollbar). Both markups render
+// always; globals.css's media query picks one via display, so there's no
+// layout shift/hydration mismatch from doing this in JS.
 function ComparisonTable() {
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
-            <th style={{ padding: "10px 12px" }}></th>
-            <th style={{ padding: "10px 12px" }}>A spreadsheet</th>
-            <th style={{ padding: "10px 12px" }}>Bigger-seller tools</th>
-            <th style={{ padding: "10px 12px", color: "var(--warm-ink)" }}>MarginSnap</th>
-          </tr>
-        </thead>
-        <tbody>
-          <ComparisonRow label="Setup time" spreadsheet="Hours, and upkeep every week" others="Setup for multi-channel teams" marginsnap="Minutes — connect and go" />
-          <ComparisonRow label="Built for Etsy specifically" spreadsheet="You look up every fee rule yourself" others="Etsy is one of many marketplaces supported" marginsnap="Etsy fees, VAT, and shipping built in" />
-          <ComparisonRow label="Price" spreadsheet="Free, but costs you hours" others="$15–$79/mo" marginsnap="$9/mo, one plan" />
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="comparison-table-desktop" style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
+              <th style={{ padding: "10px 12px" }}></th>
+              <th style={{ padding: "10px 12px" }}>A spreadsheet</th>
+              <th style={{ padding: "10px 12px" }}>Bigger-seller tools</th>
+              <th style={{ padding: "10px 12px", color: "var(--warm-ink)" }}>MarginSnap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARISON_ROWS.map((row) => (
+              <ComparisonRow key={row.label} {...row} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="comparison-cards-mobile">
+        {COMPARISON_ROWS.map((row) => (
+          <ComparisonCard key={row.label} {...row} />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -334,5 +375,27 @@ function ComparisonRow({ label, spreadsheet, others, marginsnap }: { label: stri
       <td style={{ padding: "12px", color: "var(--muted)" }}>{others}</td>
       <td style={{ padding: "12px", fontWeight: 600 }}>{marginsnap}</td>
     </tr>
+  );
+}
+
+function ComparisonCard({ label, spreadsheet, others, marginsnap }: { label: string; spreadsheet: string; others: string; marginsnap: string }) {
+  return (
+    <div className="card">
+      <div style={{ fontWeight: 700, marginBottom: 10 }}>{label}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: "0.9rem" }}>
+        <div>
+          <span style={{ color: "var(--muted)" }}>A spreadsheet: </span>
+          {spreadsheet}
+        </div>
+        <div>
+          <span style={{ color: "var(--muted)" }}>Bigger-seller tools: </span>
+          {others}
+        </div>
+        <div>
+          <span style={{ color: "var(--warm-ink)", fontWeight: 600 }}>MarginSnap: </span>
+          <span style={{ fontWeight: 600 }}>{marginsnap}</span>
+        </div>
+      </div>
+    </div>
   );
 }

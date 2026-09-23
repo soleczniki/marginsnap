@@ -193,9 +193,17 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
               ) : (
                 <div style={thumbPlaceholderStyle} />
               )}
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div>#{order.receiptId}</div>
-                {itemsSummary && <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>{itemsSummary}</div>}
+                {/* Truncated with an ellipsis instead of wrapping across
+                   several lines (2026-09-23, mobile fix #7) — the full
+                   title is still there via title="", for a hover/long-press.
+                   See globals.css's ".truncate-title". */}
+                {itemsSummary && (
+                  <div className="truncate-title" title={itemsSummary} style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
+                    {itemsSummary}
+                  </div>
+                )}
               </div>
             </a>
           ) : (
@@ -243,7 +251,12 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
       {expanded && (
         <tr>
           <td colSpan={6} style={{ ...tdStyle, background: "var(--surface-2)" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem", maxWidth: 420 }}>
+            {/* className carries the maxWidth now (2026-09-23, mobile fix
+               #8) — the fixed 420px left empty space to the right of this
+               panel once the row was already wide, reading as an extra
+               reason for the table's horizontal scroll. See globals.css's
+               ".fee-breakdown-panel": full-width below 640px. */}
+            <div className="fee-breakdown-panel" style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
               {lines.map((line, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "var(--muted)" }}>{line.label}</span>

@@ -102,3 +102,180 @@ a { color: var(--accent-ink); }
 }
 .legal-doc h1 { font-size: 1.6rem; }
 .legal-doc h2 { font-size: 1.15rem; margin-top: 2em; }
+
+/* ==========================================================================
+   Mobile responsiveness (2026-09-23, Bogdan's request — full pass after
+   testing the app at 393px in Chrome's device emulator). Inline styles
+   (this whole codebase's normal styling approach) can't express @media
+   queries or :checked-driven toggles, so the rules below are real CSS,
+   applied via className alongside the existing inline styles. Several use
+   !important deliberately: they're overriding an inline style (e.g.
+   display/flex-direction/text-align set in the component) rather than
+   fighting another class, which is exactly the case !important exists for.
+   Breakpoint: 640px, matching where the emulated iPhone (393px) sits well
+   inside "mobile" and typical tablets/desktops sit outside it.
+   ========================================================================== */
+
+/* ---- Hamburger nav (landing page nav + dashboard header, issues #1/#2) --
+   CSS-only checkbox+label disclosure, no client JS: a hidden checkbox, a
+   label styled as the hamburger button, and a ~ (general sibling) selector
+   that reveals .nav-links when it's checked. Checkbox/label/.nav-links must
+   all be direct siblings under the same flex container for ~ to reach
+   .nav-links — see LandingPage.tsx / dashboard/page.tsx for the markup. */
+.nav-toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-toggle-label {
+  display: none;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  margin: -8px;
+}
+.nav-toggle-label span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+@media (max-width: 640px) {
+  .nav-toggle-label {
+    display: inline-flex;
+  }
+  .nav-links {
+    display: none !important;
+    flex-basis: 100%;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    padding-top: 8px;
+  }
+  .nav-toggle-checkbox:checked ~ .nav-links {
+    display: flex !important;
+  }
+  .nav-links > a {
+    padding: 10px 4px;
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* ---- Comparison table → stacked cards on mobile (issue #3) -------------
+   A 4-column table just can't fit 393px without horizontal scroll, so below
+   640px it's replaced entirely by one card per row (label + the three
+   answers stacked), and the table itself is hidden rather than scrollable.
+   See LandingPage.tsx's ComparisonTable/ComparisonCards. */
+.comparison-cards-mobile {
+  display: none;
+}
+@media (max-width: 640px) {
+  .comparison-table-desktop {
+    display: none !important;
+  }
+  .comparison-cards-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* ---- Shop name / sync button row on the dashboard (issue #5) -----------
+   Desktop: shop name left, Sync button + "last synced" right-aligned.
+   Mobile: that right-aligned column reads as floating/disconnected once it
+   wraps under a narrow width, so stack everything, left-align the sync
+   details, and let the button take the full row. */
+@media (max-width: 640px) {
+  .shop-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .shop-header-actions {
+    align-items: stretch !important;
+    width: 100%;
+  }
+  .shop-header-actions p {
+    text-align: left !important;
+  }
+  .shop-header-actions .button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ---- Collapsible filters panel (issue #6) -------------------------------
+   PeriodPicker + CustomDatePicker + ShippingModeToggle together take a lot
+   of vertical space once they wrap to several lines on a narrow screen.
+   Below 640px they're tucked behind a "Filters" disclosure (same
+   checkbox+label pattern as the nav, above) instead of always shown open.
+   Desktop is completely unaffected — .filters-toggle-label only appears in
+   this media query, and .filters-panel has no display rule outside it. */
+.filters-toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.filters-toggle-label {
+  display: none;
+}
+@media (max-width: 640px) {
+  .filters-toggle-label {
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-2);
+    margin-bottom: 12px;
+  }
+  .filters-panel {
+    display: none;
+  }
+  .filters-toggle-checkbox:checked ~ .filters-panel {
+    display: block;
+  }
+}
+
+/* ---- Order/product title truncation (issue #7) --------------------------
+   Long listing titles used to wrap across several lines inside a table
+   cell, blowing up row height. This clips to one line with an ellipsis;
+   the full title is still available via the title="" attribute (hover on
+   desktop, long-press on mobile) and to screen readers via the element's
+   text content. min-width: 0 is needed alongside it since these sit inside
+   flex rows (the thumbnail+title link) — without it, a flex item won't
+   shrink below its text's natural width and the ellipsis never kicks in. */
+.truncate-title {
+  display: block;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .truncate-title {
+    max-width: 130px;
+  }
+}
+
+/* ---- Expanded fee-breakdown panel (issue #8) ----------------------------
+   OrdersTable's expanded fee row used a fixed max-width: 420px for its
+   content so it wouldn't stretch full-width on desktop — but that same
+   fixed width left a block of empty space to the right of it once the row
+   was already wide (long titles, nowrap money columns), which read as an
+   extra reason for the table's horizontal scroll. On mobile, let it fill
+   whatever width the row already has instead of adding its own gap. */
+.fee-breakdown-panel {
+  max-width: 420px;
+}
+@media (max-width: 640px) {
+  .fee-breakdown-panel {
+    max-width: 100%;
+  }
+}

@@ -162,9 +162,12 @@ convenient, not blocking anything:
   developer dashboard) before resubmitting anything, rather than guessing
   at what to fix. This is the single hard blocker on inviting any beta
   tester other than Bogdan himself — nothing else on this list stops that.
-- **Mobile**: not yet checked on a real phone/small viewport as of
-  2026-09-17 (Bogdan's note) — do this before launch even if nothing else
-  prompts it.
+- ~~**Mobile**: not yet checked on a real phone/small viewport as of
+  2026-09-17.~~ First real pass done 2026-09-23 — see "Mobile
+  responsiveness pass" under Current status. Checked in Chrome's device
+  emulator (iPhone 16, 393×852px), not yet on a physical phone — worth a
+  quick real-device check before launch, but nothing currently known to be
+  broken there.
 - ~~**Set `ANTHROPIC_API_KEY` in Vercel's env vars.**~~ Done — Bogdan added
   it to Vercel (Production/Preview/Development) 2026-09-17. If the
   upload-a-screenshot ad-spend import still returns a "not set up yet"
@@ -601,6 +604,52 @@ superadmin can grant/revoke that flag for others, via a button
 however migrations normally get applied) to actually add the column before
 this works — the migration file is written but hasn't been applied yet as
 of this writing.
+
+**Mobile responsiveness pass (2026-09-23)**: first real mobile pass, after
+Bogdan tested at 393×852px (Chrome's iPhone 16 emulator) and listed 8
+issues. All inline-style-based components in this codebase can't express
+`@media` queries or `:checked ~` toggles, so this added real CSS to
+`globals.css` (new rules at the bottom of the file) applied via
+`className` alongside the existing inline styles — several with
+`!important`, deliberately, to override an inline style rather than fight
+another class. Everything below is CSS-only, no new client components:
+- **Hamburger nav** (landing page nav + dashboard header) — a hidden
+  checkbox + a label styled as the hamburger button + a `~` sibling
+  selector revealing `.nav-links` when checked. `id="landing-nav-toggle"`
+  / `id="dashboard-nav-toggle"` (distinct ids; the two never render
+  together).
+- **Comparison table** (landing page) — a `<table>` can't fit 4 columns at
+  393px without a scroll Bogdan explicitly didn't want, so below 640px
+  it's replaced entirely by one card per row (`.comparison-cards-mobile`
+  in `LandingPage.tsx`) instead of the table (`.comparison-table-desktop`)
+  — both render always, CSS picks one via `display`, so there's no
+  hydration mismatch.
+- **Landing page footer** — was already in the markup; Bogdan just hadn't
+  noticed it blending into the background. Given a `border-top` and
+  `background: var(--surface)` so it reads as a distinct section.
+- **Dashboard shop-name/sync-button row** — `.shop-header-row`/
+  `.shop-header-actions` stack it vertically and left-align the sync
+  details below 640px instead of leaving a right-aligned column floating
+  once it wraps.
+- **Collapsible filters** — `PeriodPicker`/`CustomDatePicker`/
+  `ShippingModeToggle` on `/dashboard` are now wrapped in a
+  `.filters-panel` behind a "Filters ▾" checkbox+label disclosure
+  (`#filters-toggle`) below 640px; open by default above it.
+- **Title truncation** — order/product titles (`OrdersTable.tsx`,
+  `ProductsTable.tsx`) now clip to one line with an ellipsis
+  (`.truncate-title`, `max-width` 220px desktop / 130px mobile) instead of
+  wrapping across several lines; full title still available via `title=""`.
+- **Fee-breakdown panel** (`OrdersTable.tsx`'s expanded row) — the fixed
+  `max-width: 420px` (now `.fee-breakdown-panel`) is relaxed to 100% below
+  640px, removing the empty space that was reading as an extra reason for
+  the table's horizontal scroll; combined with title truncation above,
+  most orders shouldn't need to scroll at all on mobile anymore.
+
+Not yet re-verified on-device after committing (device_bash is still down
+on Bogdan's machine — see the file-transfer note near the top of this
+session's history — so this went through the stage/edit/commit-by-path
+workflow; byte sizes confirmed matching post-commit, but a real
+`npm run dev` visual check on mobile viewport hasn't happened yet).
 
 ## Etsy API access — path forward
 
