@@ -89,7 +89,12 @@ export default async function AdminUsersPage() {
 
   return (
     <>
-      <AdminHeader backHref="/dashboard" backLabel="← Back to dashboard" />
+      {/* No "back to dashboard" link for the superadmin (2026-09-23) — that
+         account is redirected straight back here from /dashboard (see
+         dashboard/page.tsx), so the link would just point back at this same
+         page. A regular promoted admin can still be a real seller with an
+         actual dashboard to return to, so they keep the link. */}
+      <AdminHeader {...(viewerIsSuperAdmin ? {} : { backHref: "/dashboard", backLabel: "← Back to dashboard" })} />
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 80px" }}>
         <h1 style={{ fontSize: "1.4rem", marginBottom: 4 }}>Admin</h1>
         <p style={{ color: "var(--muted)", marginBottom: 24 }}>
