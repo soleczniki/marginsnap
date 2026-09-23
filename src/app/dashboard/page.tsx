@@ -18,7 +18,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { getBillingStatus } from "@/lib/billing";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 import { Logo } from "@/components/Logo";
-import { isAdminUser } from "@/lib/admin";
+import { isAdminUser, isSuperAdminEmail } from "@/lib/admin";
 
 function isViewKey(value: string | undefined): value is ViewKey {
   return value === "orders" || value === "products";
@@ -41,6 +41,16 @@ export default async function Dashboard({
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
+
+  // The superadmin account (2026-09-23, Bogdan's request) is purely
+  // administrative — it never connects an Etsy shop or goes through
+  // onboarding, so send it straight to /admin instead of the regular
+  // connect-shop / trial-gate flow below. Checked BEFORE the shop/user
+  // lookup so this account skips those queries entirely on every visit.
+  // Only the one hardcoded superadmin — a promoted-but-not-superadmin
+  // "admin" account can still be a real seller too, so it isn't redirected
+  // here (see src/lib/admin.ts).
+  if (isSuperAdminEmail(session.user.email)) redirect("/admin");
 
   const [shop, user] = await Promise.all([
     prisma.shop.findFirst({ where: { userId: session.user.id } }),
