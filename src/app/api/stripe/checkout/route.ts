@@ -9,6 +9,13 @@ import { stripe } from "@/lib/stripe";
 // or not: someone mid-trial can subscribe early, and someone past it lands
 // here from TrialEndedScreen. src/app/api/stripe/webhook/route.ts is what
 // actually flips subscriptionStatus to "active" once checkout completes.
+//
+// IF THIS CHANGES — price, a second tier, billing cycle, anything about how
+// the subscription works — also update src/app/terms/page.tsx §5
+// (Subscription and billing). That section deliberately doesn't restate the
+// price so it wouldn't need updating for a plain price change, but a change
+// to the MODEL itself (not just the number) still needs to be reflected
+// there (2026-09-24, Bogdan's request).
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.user.email) {
