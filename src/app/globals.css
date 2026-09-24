@@ -20,24 +20,21 @@
   --warm-soft: #fbe3d1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #12160f;
-    --surface: #181d15;
-    --surface-2: #1e241a;
-    --ink: #e6ebe1;
-    --muted: #93998c;
-    --line: #313829;
-    --accent: #5cb686;
-    --accent-ink: #9adcb9;
-    --accent-soft: #1e3227;
-    --loss: #e08871;
-    --loss-soft: #3a2320;
-    --warm: #ff8a54;
-    --warm-ink: #ffb08a;
-    --warm-soft: #3a2414;
-  }
-}
+/* Dark-mode variant removed (2026-09-24, Bogdan's report) — it was firing
+   automatically off the visitor's OS/browser preference
+   (prefers-color-scheme), which is a real design decision (colors, contrast,
+   every screenshot/comparison card) that was never actually made — the
+   values above were a rough placeholder set, not a reviewed dark theme. A
+   visitor with a dark-mode phone was silently seeing that placeholder
+   instead of the real product. The app now always renders the one designed
+   (light) theme regardless of device/browser setting. Revisit as a real,
+   explicit dark theme (with its own review pass) if it's ever wanted — an
+   actual light/dark toggle, not an automatic OS-driven switch, since a
+   sign-in email and the marketing page should look the same for every
+   visitor regardless of their device.
+
+   The dark-mode --paper/--surface/etc. values previously here are kept in
+   git history if a real dark theme picks this back up later. */
 
 * { box-sizing: border-box; }
 
@@ -93,6 +90,27 @@ a { color: var(--accent-ink); }
 
 .profit-positive { color: var(--accent-ink); }
 .profit-negative { color: var(--loss); }
+
+/* Small "ⓘ" hint next to a field label whose meaning isn't obvious at a
+   glance (2026-09-24, first use: Manage Costs' "Typical shipping cost"
+   field). Native title="" for the actual tooltip text — no JS tooltip
+   component, consistent with how simple the rest of this codebase's UI is;
+   the tradeoff is it only shows on hover/long-press, which is why the field
+   label itself should still say what it means without relying on this. */
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-style: normal;
+  cursor: help;
+}
 
 .legal-doc {
   max-width: 68ch;
@@ -281,12 +299,19 @@ a { color: var(--accent-ink); }
   }
 }
 
-/* ---- Expanded fee-breakdown panel (issue #8, revised 2026-09-23) --------
-   OrdersTable.tsx builds this as `display: inline-grid` now, which already
-   sizes it to its own content (label + number, nothing more) rather than
-   stretching across the row — see that file's comment. This class is just
-   an overflow safety net for an unusually long fee-rate label on a very
-   narrow screen, not the thing doing the sizing. */
+/* ---- Expanded fee-breakdown panel (issue #8, revised again 2026-09-24) --
+   The inline-grid sizing (2026-09-23) fixed the panel stretching to the
+   row's full width, but Bogdan reported it was still unusable on mobile:
+   the *table itself* (Date/thumbnail/Order/Revenue/Fees/Shipping/Profit)
+   is wider than a phone screen and scrolls horizontally (deliberate mobile
+   fallback, see PROJECT.md) — so after scrolling right to tap "Fees" and
+   expand a row, the breakdown panel rendered back at the row's natural
+   left edge, off-screen from wherever the user had scrolled to, forcing
+   another scroll to even find it, with no visual link between a number and
+   its label once found. Fixed in OrdersTable.tsx by wrapping the panel in
+   a `position: sticky; left: 0` div — see that file's comment. This class
+   is now just an overflow safety net for an unusually long fee-rate label,
+   not the thing doing the sizing or positioning. */
 .fee-breakdown-panel {
   max-width: 100%;
 }

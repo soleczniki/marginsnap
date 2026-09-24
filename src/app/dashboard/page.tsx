@@ -33,6 +33,7 @@ export default async function Dashboard({
 }: {
   searchParams: {
     connected?: string;
+    billing_error?: string;
     period?: string;
     shipping?: string;
     view?: string;
@@ -288,6 +289,18 @@ export default async function Dashboard({
         {searchParams.connected === "1" && (
           <div className="card" style={{ marginBottom: 20, borderColor: "var(--accent)" }}>
             ✅ Etsy shop connected — pulling your listings and orders now.
+          </div>
+        )}
+
+        {/* Shown when /api/stripe/portal's Stripe call fails (2026-09-24) —
+           see that route's header comment for the known causes. This just
+           keeps a failed "Manage billing" click from looking like a raw
+           crash; it doesn't attempt to guess which cause it was. */}
+        {searchParams.billing_error === "1" && (
+          <div className="card" style={{ marginBottom: 20, borderColor: "var(--loss)" }}>
+            Couldn&rsquo;t open the billing portal just now — nothing on your account changed.
+            Try again in a moment; if it keeps happening, email{" "}
+            <a href="mailto:support@marginsnap.app">support@marginsnap.app</a>.
           </div>
         )}
 

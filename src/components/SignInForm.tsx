@@ -17,6 +17,7 @@ export function SignInForm({
   subtitle = "See what you actually made on that sale, in the time it takes to wrap the package.",
   id,
   showLegalLinks = true,
+  showTermsCheckbox = true,
 }: {
   /** Overridable so the landing page (2026-09-17) can reuse this exact form
    * — same email/magic-link mechanics, no separate signup flow to build —
@@ -31,6 +32,18 @@ export function SignInForm({
    * false here. Defaults to true so this form still stands on its own if
    * anything ever embeds it without a footer of its own. */
   showLegalLinks?: boolean;
+  /** Defaults to true (the landing page's signup form — a first-time
+   * visitor genuinely needs to agree before an account is created).
+   * src/app/auth/signin/page.tsx (2026-09-24, Bogdan's request for a real
+   * dedicated sign-in page reachable from the nav) passes false: a
+   * returning user re-checking a box they already agreed to on signup read
+   * as pointless friction. This still can't truly tell signup from sign-in
+   * before the email's submitted (same underlying limitation noted below —
+   * see PROJECT.md's "Separate sign-up from sign-in" backlog item for the
+   * fuller fix), so the dedicated sign-in page shows the same Terms/Privacy
+   * links as plain disclosure text instead of a required checkbox, rather
+   * than silently dropping the disclosure altogether. */
+  showTermsCheckbox?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -106,24 +119,35 @@ export function SignInForm({
           </div>
           {/* Required (2026-09-17, Bogdan's request) — same form serves both
              signup and sign-in (there's no way to tell which before the
-             email is submitted), so this shows every time rather than only
-             on a first-ever signup. A plain HTML `required` checkbox is
-             enough: the browser blocks submission natively until it's
-             checked, no extra state needed here. */}
-          <label
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              fontSize: "0.8rem",
-              color: "var(--muted)",
-            }}
-          >
-            <input type="checkbox" required style={{ marginTop: 3 }} />
-            <span>
-              I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
-            </span>
-          </label>
+             email is submitted), so this shows every time this form is used
+             as the SIGNUP entry point rather than only on a first-ever
+             signup. A plain HTML `required` checkbox is enough: the browser
+             blocks submission natively until it's checked, no extra state
+             needed here. showTermsCheckbox={false} (the dedicated sign-in
+             page, 2026-09-24) swaps this for plain non-blocking text below
+             instead — a returning user shouldn't have to re-click "I agree"
+             every time they sign in. */}
+          {showTermsCheckbox ? (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                fontSize: "0.8rem",
+                color: "var(--muted)",
+              }}
+            >
+              <input type="checkbox" required style={{ marginTop: 3 }} />
+              <span>
+                I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+              </span>
+            </label>
+          ) : (
+            <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>
+              By continuing you agree to our <a href="/terms">Terms</a> and{" "}
+              <a href="/privacy">Privacy Policy</a>.
+            </p>
+          )}
         </form>
       )}
 

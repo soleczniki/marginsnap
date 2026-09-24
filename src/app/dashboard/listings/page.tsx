@@ -113,8 +113,46 @@ export default async function ManageCosts() {
                       currency={currency}
                     />
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ color: "var(--muted)", fontSize: "0.85rem", minWidth: 90 }}>Typical shipping</span>
+                  {/* Given its own top border + extra top padding
+                     (2026-09-24, Bogdan's report) — with only the same 10px
+                     gap as the row above it, this read as crowding right up
+                     against the Cost of goods editor instead of as its own
+                     separate field. Label reworded from "Typical shipping"
+                     to "Typical shipping cost (to you)" plus an info
+                     tooltip — Bogdan's report that it wasn't clear this is
+                     what shipping costs the SELLER, not what the buyer was
+                     charged (that's Order.shippingCost, shown elsewhere —
+                     this field, Listing.defaultShippingCost, is never
+                     charged to anyone). */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      marginTop: 6,
+                      paddingTop: 14,
+                      borderTop: "1px solid var(--line)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "var(--muted)",
+                        fontSize: "0.85rem",
+                        minWidth: 90,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      Typical shipping cost (to you)
+                      <span
+                        className="info-tip"
+                        title="What it typically costs you to ship this item — not what you charge the buyer. Etsy only tells us what buyers were charged; this is your own cost, entered by hand."
+                      >
+                        i
+                      </span>
+                    </span>
                     <DefaultShippingCostEditor
                       listingId={listing.id}
                       initialCost={listing.defaultShippingCost ? Number(listing.defaultShippingCost) : null}

@@ -141,6 +141,27 @@ convenient, not blocking anything:
   on TOTP vs. email-code vs. something else, or on whether it's required
   or optional per account. Note it'll need to fit around the existing
   passwordless magic-link flow (`src/lib/auth.ts`) rather than replace it.
+- **Admin pricing controls: per-user trial extension + discounts**
+  (2026-09-24, Bogdan's request) — "we will need to add some functionality
+  like 'extend trial period' for a specific user or 'add discount' so we're
+  flexible on controlling people's pricing." Not scoped yet. Rough shape,
+  for whoever picks this up:
+  - **Extend trial**: `User.trialEndsAt` already exists and already governs
+    trial gating end-to-end (`src/lib/billing.ts`'s `getBillingStatus`) —
+    this is likely just a new admin-only mutation (superadmin/admin-gated,
+    same pattern as `AdminToggle.tsx` →
+    `/api/admin/users/[id]/toggle-admin`) that pushes a given user's
+    `trialEndsAt` forward by N days or to a chosen date, on
+    `/admin/users/[id]`. No schema change expected.
+  - **Discounts**: no existing field for this — Stripe itself supports
+    Coupons/Promotion Codes natively (a coupon applied to a customer or
+    subscription), which would mean no new MarginSnap-side billing logic at
+    all, just an admin action that calls Stripe's API to attach one to a
+    given `stripeCustomerId`/subscription. Needs a decision on whether
+    discounts are ad-hoc (admin picks a %/amount per user on the spot) or a
+    small fixed set of reusable coupon codes created once in Stripe and
+    just applied by admins here — the latter is simpler and keeps Stripe as
+    the source of truth for what discount actually exists.
 
 ## Before beta launch — do not forget
 
@@ -605,6 +626,25 @@ however migrations normally get applied) to actually add the column before
 this works — the migration file is written but hasn't been applied yet as
 of this writing.
 
+**Update 2026-09-24**: confirmed applied — the admin dashboard and
+`AdminToggle` are working in production (Bogdan: "everything from the UI
+side looks ok"), which isn't possible unless `users.isAdmin` really exists
+in the live database. Worth flagging a real gap this surfaced, though:
+`package.json`'s `build` script is plain `next build` — there's no
+`prisma migrate deploy` step anywhere in the deploy pipeline (`vercel.json`
+has no `buildCommand` override either), so **no migration is ever applied
+automatically on a Vercel deploy**. Every migration so far has only reached
+production because Bogdan ran it by hand against `DATABASE_URL`. That's
+fine as long as it's remembered every time, but it's a silent-failure risk
+that gets easy to forget once beta users are live — the app would deploy
+"successfully" and just throw on any code path touching a column/table
+that hasn't actually been added yet. Worth deciding before beta: either
+make this an explicit checklist step every time (documented here, or a
+reminder wherever migrations get written), or change the build command to
+`prisma migrate deploy && next build` so it can't be skipped — the latter
+needs care around migrations that lock tables under live traffic, so it's
+a real decision, not a drop-in change.
+
 **Mobile responsiveness pass (2026-09-23)**: first real mobile pass, after
 Bogdan tested at 393×852px (Chrome's iPhone 16 emulator) and listed 8
 issues. All inline-style-based components in this codebase can't express
@@ -650,6 +690,55 @@ on Bogdan's machine — see the file-transfer note near the top of this
 session's history — so this went through the stage/edit/commit-by-path
 workflow; byte sizes confirmed matching post-commit, but a real
 `npm run dev` visual check on mobile viewport hasn't happened yet).
+
+**Real-phone mobile pass, round 2 (2026-09-24)**: Bogdan's first actual
+physical-phone check (previous pass above was Chrome's emulator only)
+surfaced several issues the emulator pass missed or didn't fully fix:
+
+- **Dark mode was following the phone's OS setting** — `globals.css` had a
+  `prefers-color-scheme: dark` media query auto-switching every color
+  variable, but no actual dark theme had ever been designed/reviewed (the
+  values were a rough placeholder set from early on). Removed entirely —
+  the app now always renders the one real (light) theme regardless of
+  device/browser preference. A real dark theme, if wanted later, needs its
+  own design pass and should be an explicit toggle, not automatic.
+- **Fee-breakdown panel — still broken after the 2026-09-23 inline-grid
+  fix.** That fix sized the panel to its own content correctly, but missed
+  the actual cause of "have to scroll left/right and can't tell which
+  number matches which label": the *table itself* is wider than a phone
+  screen (Date/thumbnail/Order/Revenue/Fees/Shipping/Profit, deliberately
+  horizontal-scroll on mobile — see the pass above), so after scrolling
+  right to tap "Fees", the expanded panel rendered back at the row's
+  natural left edge — off-screen from wherever the user had scrolled to.
+  Fixed properly this time with `position: sticky; left: 0` on the panel's
+  wrapper (`OrdersTable.tsx`) so it stays pinned to the visible left edge
+  of the scroll area no matter how far right the row's been scrolled —
+  every number now sits right next to its label with no extra scrolling.
+- **`/api/stripe/portal` 500 error** ("Manage billing" button, both
+  desktop and phone) — wrapped in try/catch so it degrades to a dashboard
+  banner instead of a raw crash; the real cause is still unconfirmed (two
+  live-mode-switch-related candidates — see that route's header comment
+  for both and how to tell them apart from Vercel's function logs).
+- **Manage Costs page** — "Typical shipping" sat too close to the Cost of
+  goods editor above it (given its own top border + more top padding now)
+  and didn't make clear it's the seller's own cost, not what the buyer
+  pays — relabeled "Typical shipping cost (to you)" plus an info tooltip
+  (`.info-tip` in `globals.css`, native `title=""`, no new dependency).
+- **Sign-in redesigned** — the nav's "Sign in" link used to anchor to the
+  landing page's bottom signup section (titled "Start your free trial"),
+  confusing for a returning user. Now a real dedicated page,
+  `src/app/auth/signin/page.tsx`, reusing `SignInForm` with a new
+  `showTermsCheckbox={false}` prop so a returning user isn't asked to
+  re-click "I agree to the Terms" every sign-in (shown as plain disclosure
+  text there instead). This still can't distinguish a genuinely new signup
+  from a returning sign-in before the email's submitted — same underlying
+  limitation as the "Separate sign-up from sign-in" backlog item above,
+  which is the fuller fix if that distinction ever needs to be real
+  (e.g. different post-submit copy, or actually blocking a browsers from
+  creating a new account from the sign-in page).
+
+Also not yet re-verified on a real device after committing, same
+device_bash caveat as above.
 
 ## Etsy API access — path forward
 

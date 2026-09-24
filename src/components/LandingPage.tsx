@@ -51,7 +51,11 @@ export function LandingPage() {
           <a href="#pricing" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
             Pricing
           </a>
-          <a href="#start" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
+          {/* Dedicated sign-in page (2026-09-24, Bogdan's request) — this
+             used to anchor to #start, the bottom "Start your free trial"
+             signup form, which read wrong for someone who already has an
+             account. See src/app/auth/signin/page.tsx. */}
+          <a href="/auth/signin" style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
             Sign in
           </a>
           <a href="#start" className="button-accent" style={{ fontSize: "0.85rem" }}>

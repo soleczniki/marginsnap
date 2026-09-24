@@ -250,72 +250,77 @@ function OrderTableRowView({ order, assumeNetZero }: { order: OrderTableRow; ass
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} style={{ ...tdStyle, background: "var(--surface-2)" }}>
-            {/* Rebuilt as a CSS grid, not a flex column (2026-09-23,
-               follow-up to mobile fix #8) — the earlier flex/space-between
-               version stretched to the row's full width (colSpan={6}
-               across a table already widened by other columns), pushing
-               each label to the far left and its number to the far right
-               with a huge gap between them, exactly the opposite of what
-               was wanted. `display: inline-grid` with `max-content`
-               columns sizes this to its own content instead — only as wide
-               as the longest label + longest number, so every number sits
-               right next to its label, and there's no leftover empty
-               background (which is what was reading as "extra scroll"
-               before, though the real scroll driver, wide columns
-               elsewhere in the table, is the title-truncation fix above).
-               globals.css's ".fee-breakdown-panel" just adds a max-width:
-               100% overflow safety net, nothing else. */}
-            <div
-              className="fee-breakdown-panel"
-              style={{ display: "inline-grid", gridTemplateColumns: "max-content max-content", columnGap: 12, rowGap: 6, fontSize: "0.85rem" }}
-            >
-              {lines.map((line, i) => (
-                <Fragment key={i}>
-                  <span style={{ color: "var(--muted)" }}>{line.label}</span>
-                  <span style={{ justifySelf: "end" }}>{line.amount < 0 ? `-${money(-line.amount)}` : money(line.amount)}</span>
-                </Fragment>
-              ))}
-              {hasFees && (
-                <>
-                  <span style={{ fontWeight: 600, borderTop: "1px solid var(--line)", paddingTop: 6 }}>Total fees</span>
-                  <span style={{ fontWeight: 600, justifySelf: "end", borderTop: "1px solid var(--line)", paddingTop: 6 }}>
-                    -{money(order.feesBreakdown!.totalFees!)}
-                  </span>
-                </>
-              )}
-              {typeof order.feesBreakdown?.netToSeller === "number" && (
-                <>
-                  <span style={{ color: "var(--muted)" }}>Net to seller (before cost of goods)</span>
-                  <span style={{ color: "var(--muted)", justifySelf: "end" }}>{money(order.feesBreakdown.netToSeller)}</span>
-                </>
-              )}
-              {typeof order.feesBreakdown?.shippingTotal === "number" && order.feesBreakdown.shippingTotal !== 0 && (
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 8,
-                    borderTop: "1px solid var(--line)",
-                    paddingTop: 8,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span style={{ color: "var(--muted)" }}>Your shipping cost</span>
-                  {assumeNetZero ? (
-                    <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>assumed net-zero — excluded from profit</span>
-                  ) : (
-                    <ShippingCostEditor
-                      orderId={order.id}
-                      initialCost={order.shippingCostAtSale}
-                      currency={order.currency}
-                      singleListingId={order.singleListingId}
-                    />
-                  )}
-                </div>
-              )}
+          {/* padding: 0 here — the sticky wrapper div below owns the padding
+             now, since padding on the <td> itself would sit outside the
+             sticky positioning and get scrolled away with the row. */}
+          <td colSpan={6} style={{ ...tdStyle, background: "var(--surface-2)", padding: 0 }}>
+            {/* Sticky-pinned to the scroll container's left edge (2026-09-24,
+               second follow-up to mobile fix #8). The inline-grid sizing
+               below (2026-09-23) fixed the panel stretching to the row's
+               full width, but on mobile the *table itself* scrolls
+               horizontally (deliberate — see PROJECT.md), so after
+               scrolling right to tap "Fees", the expanded panel rendered
+               back at the row's natural left edge: off-screen from wherever
+               the user had scrolled to, needing yet another scroll to find
+               it, with the labels and numbers separated by whatever gap
+               that scroll position happened to create. `position: sticky;
+               left: 0` on this wrapper keeps the panel pinned to the left
+               edge of the visible area no matter how far right the row's
+               other columns have been scrolled, so it's always fully
+               visible with every number right next to its label — no
+               scrolling needed just to read the breakdown. */}
+            <div style={{ position: "sticky", left: 0, padding: "10px", width: "fit-content" }}>
+              <div
+                className="fee-breakdown-panel"
+                style={{ display: "inline-grid", gridTemplateColumns: "max-content max-content", columnGap: 12, rowGap: 6, fontSize: "0.85rem" }}
+              >
+                {lines.map((line, i) => (
+                  <Fragment key={i}>
+                    <span style={{ color: "var(--muted)" }}>{line.label}</span>
+                    <span style={{ justifySelf: "end" }}>{line.amount < 0 ? `-${money(-line.amount)}` : money(line.amount)}</span>
+                  </Fragment>
+                ))}
+                {hasFees && (
+                  <>
+                    <span style={{ fontWeight: 600, borderTop: "1px solid var(--line)", paddingTop: 6 }}>Total fees</span>
+                    <span style={{ fontWeight: 600, justifySelf: "end", borderTop: "1px solid var(--line)", paddingTop: 6 }}>
+                      -{money(order.feesBreakdown!.totalFees!)}
+                    </span>
+                  </>
+                )}
+                {typeof order.feesBreakdown?.netToSeller === "number" && (
+                  <>
+                    <span style={{ color: "var(--muted)" }}>Net to seller (before cost of goods)</span>
+                    <span style={{ color: "var(--muted)", justifySelf: "end" }}>{money(order.feesBreakdown.netToSeller)}</span>
+                  </>
+                )}
+                {typeof order.feesBreakdown?.shippingTotal === "number" && order.feesBreakdown.shippingTotal !== 0 && (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      borderTop: "1px solid var(--line)",
+                      paddingTop: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>Your shipping cost</span>
+                    {assumeNetZero ? (
+                      <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>assumed net-zero — excluded from profit</span>
+                    ) : (
+                      <ShippingCostEditor
+                        orderId={order.id}
+                        initialCost={order.shippingCostAtSale}
+                        currency={order.currency}
+                        singleListingId={order.singleListingId}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </td>
         </tr>
