@@ -12,14 +12,27 @@ import { Logo } from "@/components/Logo";
 // shitty old" / "the hamburger is gone it should be here too"). One shared
 // component now instead of tripling the same markup a fourth time.
 //
-// Only "Sign out" lives in nav-links today — these pages' own "← Back to
-// dashboard" link sits inside <main>, not here, so there's nothing else to
-// collapse. Still wrapped in the same checkbox+label hamburger pattern as
-// the main dashboard header (globals.css's ".nav-toggle-checkbox"/
-// ".nav-links") purely for visual consistency, and so a future link added
-// here collapses for free. navId must be unique if this ever renders twice
-// on the same page (it doesn't today — each page uses it once).
-export function SubpageHeader({ navId = "subpage-nav-toggle" }: { navId?: string }) {
+// 2026-09-24 (Bogdan's report: still only showed "Sign out" here, should be
+// the same full menu as the rest of the app) — now mirrors every nav-links
+// item from the main dashboard header (src/app/dashboard/page.tsx) instead
+// of just Sign out: billing, Costs, Ad spend, Settings, Admin (conditional).
+// isSubscribed/isAdmin are passed in as plain booleans rather than this
+// component importing getBillingStatus/isAdminUser itself, so it stays a
+// dumb presentational component and each caller computes them from whatever
+// `user` it already fetches (see listings/ad-spend/settings page.tsx).
+// Still wrapped in the same checkbox+label hamburger pattern as the main
+// dashboard header (globals.css's ".nav-toggle-checkbox"/".nav-links").
+// navId must be unique if this ever renders twice on the same page (it
+// doesn't today - each page uses it once).
+export function SubpageHeader({
+  navId = "subpage-nav-toggle",
+  isSubscribed,
+  isAdmin,
+}: {
+  navId?: string;
+  isSubscribed: boolean;
+  isAdmin: boolean;
+}) {
   return (
     <header
       style={{
@@ -41,6 +54,26 @@ export function SubpageHeader({ navId = "subpage-nav-toggle" }: { navId?: string
         <span></span>
       </label>
       <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <a
+          href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
+          style={{ fontSize: "0.85rem", color: "var(--muted)" }}
+        >
+          {isSubscribed ? "Manage billing" : "Subscribe — $9/mo"}
+        </a>
+        <a href="/dashboard/listings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Costs
+        </a>
+        <a href="/dashboard/ad-spend" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Ad spend
+        </a>
+        <a href="/dashboard/settings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Settings
+        </a>
+        {isAdmin && (
+          <a href="/admin" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+            Admin
+          </a>
+        )}
         <a href="/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Sign out
         </a>

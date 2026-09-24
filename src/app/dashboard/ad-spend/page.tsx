@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { AdSpendImporter } from "@/components/AdSpendImporter";
 import { RecentAdSpendEntries } from "@/components/RecentAdSpendEntries";
 import { getBillingStatus } from "@/lib/billing";
+import { isAdminUser } from "@/lib/admin";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 import { SubpageHeader } from "@/components/SubpageHeader";
 import { Footer } from "@/components/Footer";
@@ -25,10 +26,16 @@ export default async function AdSpend() {
   ]);
   if (!shop) redirect("/dashboard");
 
-  if (getBillingStatus(user).trialExpired) {
+  // Computed once and passed to every SubpageHeader below (2026-09-24) so
+  // the header shows the same billing/Admin links as the main dashboard
+  // header instead of just "Sign out" - see SubpageHeader.tsx.
+  const billing = getBillingStatus(user);
+  const isAdmin = isAdminUser(user);
+
+  if (billing.trialExpired) {
     return (
       <>
-        <SubpageHeader navId="ad-spend-nav-toggle" />
+        <SubpageHeader navId="ad-spend-nav-toggle" isSubscribed={billing.isPaying} isAdmin={isAdmin} />
         <TrialEndedScreen />
         <Footer />
       </>
@@ -74,7 +81,7 @@ export default async function AdSpend() {
 
   return (
     <>
-      <SubpageHeader navId="ad-spend-nav-toggle" />
+      <SubpageHeader navId="ad-spend-nav-toggle" isSubscribed={billing.isPaying} isAdmin={isAdmin} />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>

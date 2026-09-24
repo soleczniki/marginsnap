@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
 import { ShippingNetZeroToggle } from "@/components/ShippingNetZeroToggle";
 import { ReconnectShopLink } from "@/components/ReconnectShopLink";
+import { getBillingStatus } from "@/lib/billing";
+import { isAdminUser } from "@/lib/admin";
 import { SubpageHeader } from "@/components/SubpageHeader";
 import { Footer } from "@/components/Footer";
 
@@ -27,12 +29,21 @@ export default async function Settings() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/");
 
-  const shop = await prisma.shop.findFirst({ where: { userId: session.user.id } });
+  // This page didn't need `user` before - only fetched now so the header
+  // below can show the same billing/Admin links as the rest of the app
+  // (2026-09-24 fix, see SubpageHeader.tsx).
+  const [shop, user] = await Promise.all([
+    prisma.shop.findFirst({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id } }),
+  ]);
   if (!shop) redirect("/dashboard");
+
+  const billing = getBillingStatus(user);
+  const isAdmin = isAdminUser(user);
 
   return (
     <>
-      <SubpageHeader navId="settings-nav-toggle" />
+      <SubpageHeader navId="settings-nav-toggle" isSubscribed={billing.isPaying} isAdmin={isAdmin} />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>

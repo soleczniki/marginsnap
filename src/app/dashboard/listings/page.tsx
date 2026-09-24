@@ -6,6 +6,7 @@ import { CogsEditor, type CogsEntrySummary } from "@/components/CogsEditor";
 import { DefaultShippingCostEditor } from "@/components/DefaultShippingCostEditor";
 import { resolveCogsForDate } from "@/lib/cogs";
 import { getBillingStatus } from "@/lib/billing";
+import { isAdminUser } from "@/lib/admin";
 import { TrialEndedScreen } from "@/components/TrialEndedScreen";
 import { SubpageHeader } from "@/components/SubpageHeader";
 import { Footer } from "@/components/Footer";
@@ -26,13 +27,19 @@ export default async function ManageCosts() {
   ]);
   if (!shop) redirect("/dashboard");
 
+  // Computed once and passed to every SubpageHeader below (2026-09-24) so
+  // the header shows the same billing/Admin links as the main dashboard
+  // header instead of just "Sign out" - see SubpageHeader.tsx.
+  const billing = getBillingStatus(user);
+  const isAdmin = isAdminUser(user);
+
   // This page is reachable directly by URL, not just via the dashboard —
   // needs its own trial-expired check rather than relying on the dashboard
   // having already gated it (see src/lib/billing.ts).
-  if (getBillingStatus(user).trialExpired) {
+  if (billing.trialExpired) {
     return (
       <>
-        <SubpageHeader navId="listings-nav-toggle" />
+        <SubpageHeader navId="listings-nav-toggle" isSubscribed={billing.isPaying} isAdmin={isAdmin} />
         <TrialEndedScreen />
         <Footer />
       </>
@@ -56,7 +63,7 @@ export default async function ManageCosts() {
 
   return (
     <>
-      <SubpageHeader navId="listings-nav-toggle" />
+      <SubpageHeader navId="listings-nav-toggle" isSubscribed={billing.isPaying} isAdmin={isAdmin} />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <a href="/dashboard" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
@@ -117,47 +124,43 @@ export default async function ManageCosts() {
                      (2026-09-24, Bogdan's report) — with only the same 10px
                      gap as the row above it, this read as crowding right up
                      against the Cost of goods editor instead of as its own
-                     separate field. Label reworded from "Typical shipping"
-                     to "Typical shipping cost (to you)" plus an info
-                     tooltip — Bogdan's report that it wasn't clear this is
-                     what shipping costs the SELLER, not what the buyer was
-                     charged (that's Order.shippingCost, shown elsewhere —
-                     this field, Listing.defaultShippingCost, is never
-                     charged to anyone). */}
+                     separate field.
+
+                     Explanation switched from a hover-title tooltip to a
+                     plain always-visible caption (2026-09-24, second pass —
+                     Bogdan reported the tooltip wasn't showing on PC OR
+                     phone). A hover-only title="" was never going to work
+                     reliably: phone browsers generally don't show title
+                     tooltips on tap at all (no hover state to trigger), and
+                     even on desktop it needs a precise, sustained hover on a
+                     16px icon most people won't think to try — the .info-tip
+                     class in globals.css is unused now, left in case a real
+                     click/tap-to-reveal tooltip is worth building later. A
+                     caption that's just always there needs no interaction
+                     and works identically everywhere. */}
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
+                      flexDirection: "column",
+                      gap: 4,
                       marginTop: 6,
                       paddingTop: 14,
                       borderTop: "1px solid var(--line)",
                     }}
                   >
-                    <span
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: "0.85rem",
-                        minWidth: 90,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      Typical shipping cost (to you)
-                      <span
-                        className="info-tip"
-                        title="What it typically costs you to ship this item — not what you charge the buyer. Etsy only tells us what buyers were charged; this is your own cost, entered by hand."
-                      >
-                        i
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ color: "var(--muted)", fontSize: "0.85rem", minWidth: 90 }}>
+                        Typical shipping cost
                       </span>
-                    </span>
-                    <DefaultShippingCostEditor
-                      listingId={listing.id}
-                      initialCost={listing.defaultShippingCost ? Number(listing.defaultShippingCost) : null}
-                      currency={currency}
-                    />
+                      <DefaultShippingCostEditor
+                        listingId={listing.id}
+                        initialCost={listing.defaultShippingCost ? Number(listing.defaultShippingCost) : null}
+                        currency={currency}
+                      />
+                    </div>
+                    <p style={{ color: "var(--muted)", fontSize: "0.78rem", margin: 0 }}>
+                      What it typically costs YOU to ship this item — not what you charge the buyer.
+                    </p>
                   </div>
                 </div>
               </div>

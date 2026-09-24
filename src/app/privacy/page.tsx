@@ -1,14 +1,15 @@
+import { PublicNav } from "@/components/PublicNav";
+
 // Sourced from MarginSnap_Privacy_Policy_DRAFT.md — keep the two in sync, or
 // better, delete the standalone .md once this page is the source of truth.
+//
+// 2026-09-24 (Bogdan's request) — draft banner removed and PublicNav added
+// up top (this page previously had no header at all). See PublicNav.tsx.
 export default function PrivacyPolicy() {
   return (
-    <main className="legal-doc">
-      <div className="card" style={{ marginBottom: 32, borderColor: "var(--loss)" }}>
-        <strong>Draft — not legal advice, not reviewed by a lawyer.</strong> Have this reviewed by
-        a lawyer before relying on it, especially before Etsy&rsquo;s Personal App review or a real
-        launch.
-      </div>
-
+    <>
+      <PublicNav />
+      <main className="legal-doc">
       <h1>MarginSnap Privacy Policy</h1>
       <p><em>Last updated: September 10, 2026</em></p>
       <p>
@@ -44,6 +45,7 @@ export default function PrivacyPolicy() {
 
       <h2>9. Contact</h2>
       <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@lendas.lt">hello@lendas.lt</a></p>
-    </main>
+      </main>
+    </>
   );
 }
