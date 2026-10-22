@@ -53,13 +53,12 @@ export function ShopConnectionActions() {
         type="button"
         onClick={handleDisconnect}
         disabled={busy}
+        className="button"
         style={{
           background: "none",
-          border: "1px solid var(--loss)",
-          borderRadius: 8,
           color: "var(--loss)",
-          fontWeight: 600,
-          padding: "8px 14px",
+          border: "1px solid var(--loss)",
+          padding: "9px 17px", // 1px less than .button on each side, to make room for the border and keep both buttons the same height
           cursor: busy ? "default" : "pointer",
         }}
       >

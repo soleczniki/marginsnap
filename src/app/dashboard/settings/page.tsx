@@ -95,8 +95,8 @@ export default async function Settings() {
             {shop.lastSyncedAt ? ` (last synced ${shop.lastSyncedAt.toLocaleString()})` : ""}.
             Reconnect refreshes the link to Etsy and keeps all your data when you sign in with the
             same shop. Signing in with a different shop replaces this one, and disconnecting
-            removes it. Either way, every synced order and listing plus all your costs and ad
-            spend are permanently deleted - there&rsquo;s no undo.
+            removes it. In both of those cases, every synced order and listing plus all your
+            costs and ad spend are permanently deleted - there&rsquo;s no undo.
           </div>
           <ShopConnectionActions />
         </div>
