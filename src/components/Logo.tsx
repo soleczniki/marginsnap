@@ -6,11 +6,18 @@
 // the marketplace/for-sale connotation Bogdan asked for ("shapes reminiscent
 // of Etsy") without borrowing anyone's actual logo.
 //
+// Links to "/" everywhere it is used (2026-10-22): the root route already
+// redirects a signed-in visitor to /dashboard and shows the marketing site to
+// a signed-out one (src/app/page.tsx), so one link covers both cases.
 // `size` scales the whole lockup (icon + text) proportionally — the
 // dashboard header uses a smaller size than the landing page's hero.
 export function Logo({ size = 26 }: { size?: number }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: size * (8 / 26) }}>
+    <a
+      href="/"
+      aria-label="MarginSnap home"
+      style={{ display: "inline-flex", alignItems: "center", gap: size * (8 / 26), color: "inherit", textDecoration: "none" }}
+    >
       <svg width={size} height={size} viewBox="0 0 26 26" style={{ transform: "rotate(-8deg)" }}>
         <path
           d="M2,13 L9,3 L23,3 L23,23 L9,23 Z"
@@ -24,6 +31,6 @@ export function Logo({ size = 26 }: { size?: number }) {
       <span style={{ fontWeight: 800, fontSize: `${size * (1.1 / 26)}rem`, letterSpacing: "-0.01em" }}>
         Margin<span style={{ color: "var(--warm-ink)" }}>Snap</span>
       </span>
-    </span>
+    </a>
   );
 }

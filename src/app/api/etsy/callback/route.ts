@@ -43,22 +43,34 @@ export async function GET(request: Request) {
   // `results` array like the pre-launch draft of this code assumed.
   const shop = await getShopForUser(tokens.access_token, etsyUserId);
 
-  // One shop per account in this version (Blueprint decision). If this user
-  // already has a shop connected, replace it (cascades to its listings/orders)
-  // rather than accumulating duplicate rows on every reconnect.
-  await prisma.shop.deleteMany({ where: { userId: session.user.id } });
+  // One shop per account in this version (Blueprint decision). Reconnecting
+  // the SAME Etsy shop (e.g. after the Etsy app key changed or a token died)
+  // only refreshes its tokens and keeps every order, listing, cost and ad
+  // spend entry. A DIFFERENT shop replaces the old one (cascades to its
+  // listings/orders) rather than accumulating duplicate rows.
+  const etsyShopId = shop?.shop_id ? BigInt(shop.shop_id) : null;
+  const tokenData = {
+    shopName: shop?.shop_name ?? null,
+    accessTokenEnc: encryptToken(tokens.access_token),
+    refreshTokenEnc: encryptToken(tokens.refresh_token),
+    tokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+  };
+  const existing = await prisma.shop.findFirst({ where: { userId: session.user.id } });
 
-  const newShop = await prisma.shop.create({
-    data: {
-      userId: session.user.id,
-      marketplace: "etsy",
-      etsyShopId: shop?.shop_id ? BigInt(shop.shop_id) : null,
-      shopName: shop?.shop_name ?? null,
-      accessTokenEnc: encryptToken(tokens.access_token),
-      refreshTokenEnc: encryptToken(tokens.refresh_token),
-      tokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
-    },
-  });
+  let newShop;
+  if (existing && etsyShopId !== null && existing.etsyShopId === etsyShopId) {
+    newShop = await prisma.shop.update({ where: { id: existing.id }, data: tokenData });
+  } else {
+    await prisma.shop.deleteMany({ where: { userId: session.user.id } });
+    newShop = await prisma.shop.create({
+      data: {
+        userId: session.user.id,
+        marketplace: "etsy",
+        etsyShopId,
+        ...tokenData,
+      },
+    });
+  }
 
   // Sync immediately so the seller sees real data right away instead of
   // waiting for the next scheduled cron run (which, on Vercel's free Hobby

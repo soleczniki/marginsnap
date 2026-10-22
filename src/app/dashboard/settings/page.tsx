@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { VatIdToggle } from "@/components/VatIdToggle";
 import { ShippingNetZeroToggle } from "@/components/ShippingNetZeroToggle";
-import { ReconnectShopLink } from "@/components/ReconnectShopLink";
+import { ShopConnectionActions } from "@/components/ShopConnectionActions";
 import { getBillingStatus } from "@/lib/billing";
 import { isAdminUser } from "@/lib/admin";
 import { SubpageHeader } from "@/components/SubpageHeader";
@@ -88,13 +88,17 @@ export default async function Settings() {
           <ShippingNetZeroToggle initialValue={shop.assumeShippingNetZero} />
         </div>
 
-        <div className="card" style={{ marginTop: 12, borderColor: "var(--loss)" }}>
+        <div id="shop-connection" className="card" style={{ marginTop: 12, borderColor: "var(--loss)" }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Shop connection</div>
           <div style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: 12 }}>
-            Currently connected: {shop.shopName ?? "your shop"}. Reconnecting swaps in whichever
-            Etsy shop you authorize next — it doesn&rsquo;t add a second shop alongside this one.
+            Currently connected: {shop.shopName ?? "your shop"}
+            {shop.lastSyncedAt ? ` (last synced ${shop.lastSyncedAt.toLocaleString()})` : ""}.
+            Reconnect refreshes the link to Etsy and keeps all your data when you sign in with the
+            same shop. Signing in with a different shop replaces this one, and disconnecting
+            removes it. Either way, every synced order and listing plus all your costs and ad
+            spend are permanently deleted - there&rsquo;s no undo.
           </div>
-          <ReconnectShopLink />
+          <ShopConnectionActions />
         </div>
       </main>
       <Footer />
