@@ -48,6 +48,28 @@ html, body {
 
 a { color: var(--accent-ink); }
 
+/* Footer pinned to the bottom of the window on short pages (2026-10-22,
+   Bogdan's request - with little content it floated mid-screen). The body is
+   a full-height column and the footer's auto top margin absorbs the leftover
+   space; on long pages there is no leftover space, so nothing changes and
+   the footer just follows the content. Layout components render their header,
+   main and footer as direct children of <body>, so only those need an
+   explicit width: a flex column item with margin: 0 auto (the centred <main>
+   blocks) would otherwise shrink to its content instead of filling the row. */
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+body > * { flex-shrink: 0; }
+body > header,
+body > nav,
+body > main,
+body > footer { width: 100%; }
+footer { margin-top: auto; }
+
+
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
