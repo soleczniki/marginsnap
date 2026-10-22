@@ -300,7 +300,7 @@ export default async function Dashboard({
           <div className="card" style={{ marginBottom: 20, borderColor: "var(--loss)" }}>
             Couldn&rsquo;t open the billing portal just now — nothing on your account changed.
             Try again in a moment; if it keeps happening, email{" "}
-            <a href="mailto:support@marginsnap.app">support@marginsnap.app</a>.
+            <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a>.
           </div>
         )}
 

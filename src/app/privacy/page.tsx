@@ -11,12 +11,12 @@ export default function PrivacyPolicy() {
       <PublicNav />
       <main className="legal-doc">
       <h1>MarginSnap Privacy Policy</h1>
-      <p><em>Last updated: September 10, 2026</em></p>
+      <p><em>Last updated: October 22, 2026</em></p>
       <p>
-        MarginSnap is operated by <strong>Lenis res, MB</strong> (trading as Lendas), a company
+        MarginSnap is operated by <strong>Lenis res, MB</strong>, a company
         registered in Lithuania (company code 302896460), registered address Antalkalnio g. 17,
         Vilnius, Lithuania, &ldquo;we,&rdquo; &ldquo;us.&rdquo; Contact:{" "}
-        <a href="mailto:hello@lendas.lt">hello@lendas.lt</a>.
+        <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a>.
       </p>
 
       <h2>1. What we collect</h2>
@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
       <p>Access, correct, delete, or export your data at any time; object to or restrict its use; withdraw the Etsy connection whenever you choose. GDPR/UK GDPR and CCPA/CPRA rights apply where relevant.</p>
 
       <h2>6. Deleting your account</h2>
-      <p>From Settings, or by emailing hello@lendas.lt — revokes our Etsy access and deletes your stored shop data permanently, other than required billing records.</p>
+      <p>From Settings, or by emailing hello@marginsnap.app — revokes our Etsy access and deletes your stored shop data permanently, other than required billing records.</p>
 
       <h2>7. Children</h2>
       <p>MarginSnap is a business tool, not directed at anyone under 18.</p>
@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
       <p>Active users are notified by email before a material change takes effect.</p>
 
       <h2>9. Contact</h2>
-      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@lendas.lt">hello@lendas.lt</a></p>
+      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
       </main>
     </>
   );

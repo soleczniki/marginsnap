@@ -18,9 +18,9 @@ export default function TermsOfService() {
       <PublicNav />
       <main className="legal-doc">
       <h1>MarginSnap Terms of Service</h1>
-      <p><em>Last updated: September 24, 2026</em></p>
+      <p><em>Last updated: October 22, 2026</em></p>
       <p>
-        Operated by <strong>Lenis res, MB</strong> (trading as Lendas), a company registered in
+        Operated by <strong>Lenis res, MB</strong>, a company registered in
         Lithuania (company code 302896460), registered address Antalkalnio g. 17, Vilnius,
         Lithuania. By creating an account you agree to these terms.
       </p>
@@ -69,7 +69,7 @@ export default function TermsOfService() {
       <p>These terms are governed by the laws of the Republic of Lithuania, where Lenis res, MB is registered.</p>
 
       <h2>12. Contact</h2>
-      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@lendas.lt">hello@lendas.lt</a></p>
+      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
       </main>
     </>
   );
