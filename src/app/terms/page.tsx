@@ -1,10 +1,12 @@
-import { PublicNav } from "@/components/PublicNav";
+import { LegalShell } from "@/components/LegalShell";
 
 // Sourced from MarginSnap_Terms_of_Service_DRAFT.md — keep the two in sync, or
 // better, delete the standalone .md once this page is the source of truth.
 //
 // 2026-09-24 (Bogdan's request) — draft banner removed and PublicNav added
 // up top (this page previously had no header at all). See PublicNav.tsx.
+// 2026-10-28: the frame (menu, footer, feedback button) now comes from
+// LegalShell.tsx, which picks the signed-in or public menu.
 // Also pulled two inline "(A lawyer should ...)" notes out of the live
 // user-facing text (they were sitting in the actual paragraphs) — moved here
 // instead so a real lawyer pass still knows to look at them:
@@ -15,8 +17,7 @@ import { PublicNav } from "@/components/PublicNav";
 export default function TermsOfService() {
   return (
     <>
-      <PublicNav />
-      <main className="legal-doc">
+      <LegalShell>
       <h1>MarginSnap Terms of Service</h1>
       <p><em>Last updated: October 22, 2026</em></p>
       <p>
@@ -70,7 +71,7 @@ export default function TermsOfService() {
 
       <h2>12. Contact</h2>
       <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
-      </main>
+      </LegalShell>
     </>
   );
 }

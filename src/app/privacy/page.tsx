@@ -1,15 +1,16 @@
-import { PublicNav } from "@/components/PublicNav";
+import { LegalShell } from "@/components/LegalShell";
 
 // Sourced from MarginSnap_Privacy_Policy_DRAFT.md — keep the two in sync, or
 // better, delete the standalone .md once this page is the source of truth.
 //
 // 2026-09-24 (Bogdan's request) — draft banner removed and PublicNav added
 // up top (this page previously had no header at all). See PublicNav.tsx.
+// 2026-10-28: the frame (menu, footer, feedback button) now comes from
+// LegalShell.tsx, which picks the signed-in or public menu.
 export default function PrivacyPolicy() {
   return (
     <>
-      <PublicNav />
-      <main className="legal-doc">
+      <LegalShell>
       <h1>MarginSnap Privacy Policy</h1>
       <p><em>Last updated: October 22, 2026</em></p>
       <p>
@@ -45,7 +46,7 @@ export default function PrivacyPolicy() {
 
       <h2>9. Contact</h2>
       <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
-      </main>
+      </LegalShell>
     </>
   );
 }

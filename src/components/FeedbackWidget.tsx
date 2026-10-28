@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { FeedbackForm } from "@/components/FeedbackForm";
 
-// Floating "Feedback" button (2026-10-28, Bogdan's request): visible on
-// every signed-in page (it is mounted from the dashboard and admin layouts),
+// Floating "Feedback" tab (2026-10-28, Bogdan's request): a vertical tab
+// stuck to the right edge of the window, always on screen and pressable on
+// phones and desktop alike. Mounted from the dashboard and admin layouts and
+// from LegalShell (privacy/terms), so it is on every signed-in page;
 // opens the feedback form in a popup so nobody has to leave what they are
 // doing. The page they were on is attached to the report automatically.
 export function FeedbackWidget() {
@@ -32,18 +34,21 @@ export function FeedbackWidget() {
         aria-label="Send feedback"
         style={{
           position: "fixed",
-          right: 16,
-          bottom: 16,
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
           zIndex: 50,
           background: "var(--accent)",
           color: "#fff",
           border: "none",
-          borderRadius: 999,
-          padding: "10px 16px",
+          borderRadius: "10px 0 0 10px",
+          padding: "16px 9px",
+          writingMode: "vertical-rl",
+          letterSpacing: "0.06em",
           fontSize: "0.9rem",
           fontWeight: 600,
           cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          boxShadow: "-2px 2px 8px rgba(0,0,0,0.25)",
         }}
       >
         Feedback
