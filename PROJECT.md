@@ -228,6 +228,15 @@ future table/migration**: enable RLS the moment a table exists, before
 relying on "the app doesn't use the Supabase API anyway" as the reason it's
 safe — it isn't, by default.
 
+**Recurrence, fixed 2026-10-28**: `cogs_entries` and `ad_spend_entries`
+(both created 2026-09-17, after the fix above) never got RLS, and Supabase's
+Security Advisor flagged them by email. Fixed in the SQL Editor with the same
+`ENABLE ROW LEVEL SECURITY` statements; all 11 public tables confirmed `true`
+via `SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';`.
+Prisma migrations do not enable RLS, so **every migration that creates a table
+must be followed by this statement for the new table, run by hand in the SQL
+Editor** (then re-run the check query).
+
 **Scaffold** (`C:\ClaudeCode\Apps\marginsnap`): Next.js 14 + TypeScript +
 Prisma (Postgres, hosted on Supabase) + NextAuth (email magic link) + PWA
 shell + legal pages (`/privacy`, `/terms`) + Stripe env wired. This part is
