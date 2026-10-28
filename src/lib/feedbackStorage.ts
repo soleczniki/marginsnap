@@ -14,7 +14,7 @@
 
 export const FEEDBACK_BUCKET = "feedback-attachments";
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
-export const MAX_FILES = 3;
+export const MAX_FILES = 5;
 export const ALLOWED_TYPES = [
   "image/png",
   "image/jpeg",
@@ -28,22 +28,46 @@ export const ALLOWED_TYPES = [
 export type FeedbackAttachment = { path: string; name: string; type: string; size: number };
 
 function config(): { base: string; key: string } | null {
-  const url = process.env.SUPABASE_URL?.replace(/\/+$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return { base: `${url}/storage/v1`, key };
+  const raw = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!raw || !key) return null;
+  let origin: string;
+  try {
+    // Only the origin is used, so a pasted "https://x.supabase.co/rest/v1/"
+    // or a trailing slash still works.
+    origin = new URL(raw).origin;
+  } catch {
+    return null;
+  }
+  return { base: `${origin}/storage/v1`, key };
 }
 
 export function storageConfigured(): boolean {
   return config() !== null;
 }
 
-function authHeaders(key: string, extra: Record<string, string> = {}): Record<string, string> {
-  // Legacy service_role keys are JWTs and go in Authorization too; the newer
-  // sb_secret_ keys are not JWTs and only go in the apikey header.
-  const headers: Record<string, string> = { apikey: key, ...extra };
-  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
-  return headers;
+// Every Supabase call goes through here. Legacy service_role keys are JWTs
+// and go in both headers; the newer sb_secret_ keys are not JWTs, so they go
+// in apikey only - and if Supabase answers 401/403 to that, the same call is
+// retried once with the key in Authorization too.
+async function storageFetch(
+  cfg: { base: string; key: string },
+  url: string,
+  init: { method: string; headers?: Record<string, string>; body?: string }
+): Promise<Response> {
+  const isJwt = cfg.key.startsWith("eyJ");
+  const send = (withBearer: boolean) =>
+    fetch(url, {
+      ...init,
+      headers: {
+        ...(init.headers ?? {}),
+        apikey: cfg.key,
+        ...(withBearer ? { Authorization: `Bearer ${cfg.key}` } : {}),
+      },
+    });
+  let res = await send(isJwt);
+  if (!isJwt && (res.status === 401 || res.status === 403)) res = await send(true);
+  return res;
 }
 
 export function safeFileName(name: string): string {
@@ -57,9 +81,9 @@ let bucketReady = false;
 // already exists), so there is nothing to set up by hand in Supabase.
 async function ensureBucket(cfg: { base: string; key: string }): Promise<void> {
   if (bucketReady) return;
-  const res = await fetch(`${cfg.base}/bucket`, {
+  const res = await storageFetch(cfg, `${cfg.base}/bucket`, {
     method: "POST",
-    headers: authHeaders(cfg.key, { "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       id: FEEDBACK_BUCKET,
       name: FEEDBACK_BUCKET,
@@ -80,16 +104,27 @@ async function ensureBucket(cfg: { base: string; key: string }): Promise<void> {
   throw new Error(`Could not create storage bucket (${res.status}): ${text.slice(0, 200)}`);
 }
 
-// One-time URL the browser PUTs the file to.
+// One-time URL the browser PUTs the file to. Tries the signed upload first
+// and only creates the bucket if Supabase says it does not exist yet.
 export async function createUploadUrl(path: string): Promise<string> {
   const cfg = config();
   if (!cfg) throw new Error("storage not configured");
-  await ensureBucket(cfg);
-  const res = await fetch(`${cfg.base}/object/upload/sign/${FEEDBACK_BUCKET}/${path}`, {
-    method: "POST",
-    headers: authHeaders(cfg.key, { "Content-Type": "application/json", "x-upsert": "false" }),
-    body: "{}",
-  });
+  const signUrl = `${cfg.base}/object/upload/sign/${FEEDBACK_BUCKET}/${path}`;
+  const sign = () =>
+    storageFetch(cfg, signUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-upsert": "false" },
+      body: "{}",
+    });
+
+  let res = await sign();
+  if (!res.ok) {
+    const text = await res.clone().text().catch(() => "");
+    if (res.status === 404 || /bucket not found/i.test(text)) {
+      await ensureBucket(cfg);
+      res = await sign();
+    }
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Could not create upload URL (${res.status}): ${text.slice(0, 200)}`);
@@ -107,9 +142,9 @@ export async function createDownloadUrls(paths: string[], expiresInSeconds: numb
   const out: Record<string, string> = {};
   if (!cfg || paths.length === 0) return out;
   try {
-    const res = await fetch(`${cfg.base}/object/sign/${FEEDBACK_BUCKET}`, {
+    const res = await storageFetch(cfg, `${cfg.base}/object/sign/${FEEDBACK_BUCKET}`, {
       method: "POST",
-      headers: authHeaders(cfg.key, { "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn: expiresInSeconds, paths }),
     });
     if (!res.ok) return out;

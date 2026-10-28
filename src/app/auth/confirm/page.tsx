@@ -13,6 +13,7 @@ import { useSearchParams } from "next/navigation";
 function ConfirmSignIn() {
   const params = useSearchParams();
   const target = params.get("u");
+  const isNew = params.get("n") === "1";
   const [clicked, setClicked] = useState(false);
 
   if (!target) {
@@ -37,12 +38,14 @@ function ConfirmSignIn() {
 
   return (
     <main style={{ maxWidth: 420, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
-      <h1 style={{ fontSize: "1.2rem", marginBottom: 8 }}>Confirm sign-in</h1>
+      <h1 style={{ fontSize: "1.2rem", marginBottom: 8 }}>{isNew ? "Welcome to MarginSnap" : "Confirm sign-in"}</h1>
       <p style={{ color: "var(--muted)", marginBottom: 24 }}>
-        Click below to finish signing in to MarginSnap.
+        {isNew
+          ? "Confirm your email to create your account and start your 30-day free trial."
+          : "Click below to finish signing in to MarginSnap."}
       </p>
       <button type="button" className="button" onClick={handleClick} disabled={clicked}>
-        {clicked ? "Signing in…" : "Sign in"}
+        {clicked ? (isNew ? "Setting up…" : "Signing in…") : isNew ? "Confirm and start free trial" : "Sign in"}
       </button>
     </main>
   );

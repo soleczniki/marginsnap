@@ -45,19 +45,34 @@ export const authOptions: NextAuthOptions = {
         const confirmUrl = new URL("/auth/confirm", baseUrl);
         confirmUrl.searchParams.set("u", url);
 
+        // New vs returning (2026-10-28, Bogdan's request: sign-up must be a
+        // different flow from sign-in). The account does not exist yet at
+        // this point on a first sign-up - NextAuth creates it when the link
+        // is used - so "no user with this email" means this is a sign-up.
+        const existing = await prisma.user.findUnique({ where: { email: identifier }, select: { id: true } });
+        const isNew = !existing;
+        if (isNew) confirmUrl.searchParams.set("n", "1");
+
+        const subject = isNew ? "Welcome to MarginSnap - confirm your email" : "Sign in to MarginSnap";
+        const heading = isNew ? "Welcome to MarginSnap" : "Sign in to MarginSnap";
+        const intro = isNew
+          ? "Confirm your email to create your account and start your 30-day free trial. This link expires in 5 minutes."
+          : "Click below to finish signing in. This link expires in 5 minutes.";
+        const button = isNew ? "Confirm email and start free trial" : "Sign in to MarginSnap";
+
         const transport = nodemailer.createTransport(provider.server);
         await transport.sendMail({
           to: identifier,
           from: provider.from,
-          subject: "Sign in to MarginSnap",
-          text: `Sign in to MarginSnap:\n${confirmUrl.toString()}\n\nThis link expires in 5 minutes. If you didn't request this, ignore this email.`,
+          subject,
+          text: `${heading}\n\n${intro}\n${confirmUrl.toString()}\n\nIf you didn't request this, ignore this email.`,
           html: `
 <body style="font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 24px; color: #111;">
-  <h2 style="margin: 0 0 8px;">Sign in to MarginSnap</h2>
-  <p style="color: #555; margin: 0 0 20px;">Click below to finish signing in. This link expires in 5 minutes.</p>
+  <h2 style="margin: 0 0 8px;">${heading}</h2>
+  <p style="color: #555; margin: 0 0 20px;">${intro}</p>
   <p style="margin: 0 0 20px;">
     <a href="${confirmUrl.toString()}" style="display:inline-block;padding:12px 22px;background:#e8622c;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
-      Sign in to MarginSnap
+      ${button}
     </a>
   </p>
   <p style="color: #999; font-size: 0.85rem;">If you didn't request this, you can safely ignore this email.</p>

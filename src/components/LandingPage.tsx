@@ -162,16 +162,21 @@ export function LandingPage() {
       </section>
 
       {/* ---------- Pricing, shown plainly ---------- */}
-      <section id="pricing" style={{ maxWidth: 480, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <div className="card" style={{ textAlign: "center", padding: "36px 32px", borderTop: "3px solid var(--warm)" }}>
+      {/* 2026-10-28: the pricing card and the sign-up form now share one
+         wrapper, id="start", so every "Start free trial" link scrolls to the
+         top of the offer with the form right below it - the price no longer
+         gets cut off. Vertical spacing was tightened for the same reason. */}
+      <div id="start">
+      <section id="pricing" style={{ maxWidth: 480, margin: "0 auto", padding: "16px 24px 16px" }}>
+        <div className="card" style={{ textAlign: "center", padding: "24px 32px", borderTop: "3px solid var(--warm)" }}>
           <p style={{ fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
             One plan. Everything included.
           </p>
-          <p style={{ marginBottom: 20 }}>
+          <p style={{ marginBottom: 12 }}>
             <span style={{ fontSize: "2.6rem", fontWeight: 700 }}>$9</span>
             <span style={{ color: "var(--muted)" }}>/month</span>
           </p>
-          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", color: "var(--muted)", lineHeight: 2, textAlign: "left", display: "inline-block" }}>
+          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 18px", color: "var(--muted)", lineHeight: 1.7, textAlign: "left", display: "inline-block" }}>
             <li>✓ Unlimited orders &amp; listings</li>
             <li>✓ Daily automatic sync from Etsy</li>
             <li>✓ Fee-aware profit, per order &amp; per product</li>
@@ -181,7 +186,7 @@ export function LandingPage() {
           <a href="#start" className="button-accent" style={{ width: "100%", fontSize: "1rem" }}>
             Start your 30-day free trial
           </a>
-          <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 12 }}>
+          <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 8, marginBottom: 0 }}>
             No card required. Cancel anytime.
           </p>
         </div>
@@ -190,12 +195,16 @@ export function LandingPage() {
       {/* ---------- Final CTA: the actual sign-in/sign-up form ---------- */}
       <section style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
         <SignInForm
-          id="start"
+          id="signup-form"
           title="Start your free trial"
-          subtitle="Enter your email — we'll send a sign-in link. New here? This creates your account and starts your 30-day free trial, no card needed."
+          subtitle="Enter your email and we'll send a link to confirm it. This creates your account and starts your 30-day free trial, no card needed."
           showLegalLinks={false}
+          submitLabel="Sign up"
+          mode="signup"
+          tight
         />
       </section>
+      </div>
 
       {/* Made visually distinct from the section above it (2026-09-23,
          mobile fix #4 — Bogdan reported no footer visible on mobile; it was

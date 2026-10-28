@@ -29,12 +29,24 @@ export async function GET(request: Request) {
 
   const baseUrl = new URL(request.url).origin;
 
+  // Business invoicing (2026-10-28, Bogdan's request): checkout asks for the
+  // billing address and offers "I'm purchasing as a business" with company
+  // name and VAT/tax ID, so the invoice Stripe generates is issued to the
+  // company. customer_update saves what they enter onto the Stripe customer
+  // (Stripe requires it when a customer already exists). Automatic VAT/sales
+  // tax is only switched on once STRIPE_AUTOMATIC_TAX=true is set in Vercel,
+  // after Stripe Tax and its registrations are configured in the Stripe
+  // dashboard - turning it on earlier makes checkout fail.
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
     customer: user.stripeCustomerId ?? undefined,
     customer_email: user.stripeCustomerId ? undefined : user.email,
     client_reference_id: user.id,
+    billing_address_collection: "required",
+    tax_id_collection: { enabled: true },
+    ...(user.stripeCustomerId ? { customer_update: { name: "auto", address: "auto" } as const } : {}),
+    ...(process.env.STRIPE_AUTOMATIC_TAX === "true" ? { automatic_tax: { enabled: true } } : {}),
     success_url: `${baseUrl}/dashboard?billing=success`,
     cancel_url: `${baseUrl}/dashboard?billing=cancelled`,
   });

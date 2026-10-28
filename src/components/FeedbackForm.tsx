@@ -15,7 +15,7 @@ const TYPES = [
 ];
 
 const ALLOWED = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "video/quicktime"];
-const MAX_FILES = 3;
+const MAX_FILES = 5;
 const MAX_BYTES = 25 * 1024 * 1024;
 
 type Uploaded = { path: string; name: string; type: string; size: number };
@@ -87,7 +87,7 @@ export function FeedbackForm({
         body: JSON.stringify({ filename: f.name, contentType: f.type, size: f.size }),
       });
       const d = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(d?.error ?? "Could not upload the file.");
+      if (!r.ok) throw new Error(`${d?.error ?? "Could not upload the file."}${d?.detail ? ` [${d.detail}]` : ""}`);
       const fd = new FormData();
       fd.append("cacheControl", "3600");
       fd.append("", f);

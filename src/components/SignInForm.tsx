@@ -18,6 +18,9 @@ export function SignInForm({
   id,
   showLegalLinks = true,
   showTermsCheckbox = true,
+  submitLabel = "Sign in",
+  mode = "signin",
+  tight = false,
 }: {
   /** Overridable so the landing page (2026-09-17) can reuse this exact form
    * — same email/magic-link mechanics, no separate signup flow to build —
@@ -44,6 +47,16 @@ export function SignInForm({
    * links as plain disclosure text instead of a required checkbox, rather
    * than silently dropping the disclosure altogether. */
   showTermsCheckbox?: boolean;
+  /** Button text: the landing page's trial form says "Sign up" (2026-10-28),
+   * the dedicated sign-in page keeps "Sign in". */
+  submitLabel?: string;
+  /** Only changes the wording of the "check your email" message. Which
+   * email is actually sent (welcome vs sign-in) is decided server-side by
+   * whether the account already exists - see src/lib/auth.ts. */
+  mode?: "signin" | "signup";
+  /** Less vertical padding, so the landing page's offer and this form fit
+   * on one screen together. */
+  tight?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -71,7 +84,7 @@ export function SignInForm({
   const expired = secondsLeft <= 0;
 
   return (
-    <main id={id} style={{ maxWidth: 420, margin: "0 auto", padding: "80px 24px" }}>
+    <main id={id} style={{ maxWidth: 420, margin: "0 auto", padding: tight ? "28px 24px 40px" : "56px 24px 40px" }}>
       <h1 style={{ fontSize: "1.6rem", marginBottom: 8 }}>{title}</h1>
       <p style={{ color: "var(--muted)", marginBottom: 28 }}>{subtitle}</p>
 
@@ -88,7 +101,11 @@ export function SignInForm({
             </>
           ) : (
             <>
-              <p style={{ marginBottom: 8 }}>Check your email for a sign-in link.</p>
+              <p style={{ marginBottom: 8 }}>
+                {mode === "signup"
+                  ? "Check your email to confirm your address and start your free trial."
+                  : "Check your email for a sign-in link."}
+              </p>
               <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
                 Expires in {minutes}:{seconds.toString().padStart(2, "0")}
               </p>
@@ -114,7 +131,7 @@ export function SignInForm({
               }}
             />
             <button type="submit" className="button-accent">
-              Sign in
+              {submitLabel}
             </button>
           </div>
           {/* Required (2026-09-17, Bogdan's request) — same form serves both

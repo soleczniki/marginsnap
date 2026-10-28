@@ -88,13 +88,10 @@ convenient, not blocking anything:
   (quarter over quarter, year over year) need a deeper sync first - weigh
   that against Etsy rate limits while on Personal Access. Show "not enough
   history yet" when the earlier period is not fully covered.
-- **Magic-link sign-in occasionally fails** ("The sign in link is no longer
-  valid") on a first click (2026-09-15). Most likely cause: an email
-  security scanner (Gmail's own link-scanning, or a corporate mail gateway)
-  auto-visiting the link to check it before the real click, which burns the
-  one-time NextAuth token. Possible fix if it keeps happening: an
-  intermediate "click to confirm sign-in" page that isn't itself the
-  token-consuming URL, so a scanner's pre-fetch doesn't burn it.
+- ~~**Magic-link sign-in occasionally fails**~~ - **fixed 2026-09-17**: the
+  emailed link opens an intermediate confirm page (`/auth/confirm`) and only
+  a real click on it consumes the one-time token, so mail scanners that
+  pre-open links can no longer burn it. Links still expire after 5 minutes.
 - **Chrome "Dangerous site" warning on marginsnap.app for some visitors**
   (2026-09-15) — confirmed a false positive (Incognito, extensions
   disabled, showed no warning), so a browser extension was flagging it, not
@@ -837,7 +834,15 @@ report.
 
 - Floating "Feedback" button on every dashboard and admin page (`src/components/FeedbackWidget.tsx`, mounted from `src/app/dashboard/layout.tsx` and `src/app/admin/layout.tsx`); the same form is also at `/dashboard/feedback`.
 - Submissions go to `POST /api/feedback`: saved in the `feedback` table, then a best-effort notification email to `FEEDBACK_NOTIFY_EMAIL` (default hello@marginsnap.app) with Reply-To set to the user's address.
-- Attachments: up to 3 images/videos, 25 MB each. The browser uploads straight to a PRIVATE Supabase Storage bucket `feedback-attachments` (created automatically on first use) through a signed upload URL from `POST /api/feedback/upload-url` - Vercel functions cannot take bodies over ~4.5 MB. Only paths are stored in `feedback.attachments`. Needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel (server-only); without them attachments are switched off and text feedback still works. Files are not deleted automatically.
+- Attachments: up to 5 images/videos, 25 MB each. The browser uploads straight to a PRIVATE Supabase Storage bucket `feedback-attachments` (created automatically on first use) through a signed upload URL from `POST /api/feedback/upload-url` - Vercel functions cannot take bodies over ~4.5 MB. Only paths are stored in `feedback.attachments`. Needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel (server-only); without them attachments are switched off and text feedback still works. Files are not deleted automatically.
 - Admin: `/admin/feedback` - filter by status (Open = new + planned, New, Planned, Done, Dismissed, All) and type, per-item status dropdown, private note, attachment previews via one-hour signed links.
 - Migrations: `20261028150000_add_feedback` (table, with RLS enabled) and `20261028180000_feedback_attachments_notes` (attachments + notes columns).
 
+
+
+## Sign-up, checkout and invoicing changes (2026-10-28)
+
+- The landing page's pricing card and sign-up form share one anchor (`#start`), with tighter spacing so the whole offer is visible after clicking "Start free trial". The form button says "Sign up".
+- Sign-up vs sign-in: `sendVerificationRequest` in `src/lib/auth.ts` sends a "Welcome to MarginSnap - confirm your email" message (and `/auth/confirm?n=1` shows matching wording) when no user exists for the address; returning users get the normal sign-in email. It is still the same NextAuth email flow.
+- `/auth/signin` has a header with a close (X) link and the standard footer.
+- Stripe Checkout collects the billing address and optional business name + tax ID (`tax_id_collection`). Automatic tax is off until `STRIPE_AUTOMATIC_TAX=true` is set in Vercel (only after Stripe Tax and its registrations are configured in the Stripe dashboard).

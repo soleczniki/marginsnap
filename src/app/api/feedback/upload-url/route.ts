@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { isAdminUser } from "@/lib/admin";
 import {
   ALLOWED_TYPES,
   MAX_FILE_BYTES,
@@ -44,6 +46,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ path, uploadUrl });
   } catch (err) {
     console.error("Feedback upload URL failed:", err);
-    return NextResponse.json({ error: "Could not start the upload. Please try again." }, { status: 500 });
+    // Admins also get the underlying reason, to make setup problems easy to
+    // diagnose; regular users only see the generic message.
+    const viewer = await prisma.user.findUnique({ where: { id: session.user.id } });
+    const detail = isAdminUser(viewer) ? (err as Error).message : undefined;
+    return NextResponse.json({ error: "Could not start the upload. Please try again.", detail }, { status: 500 });
   }
 }
