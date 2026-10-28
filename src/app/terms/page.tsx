@@ -22,7 +22,7 @@ export default function TermsOfService() {
       <p><em>Last updated: October 28, 2026</em></p>
       <p>
         Operated by <strong>Lenis res, MB</strong>, a company registered in
-        Lithuania (company code 302896460), registered address Antalkalnio g. 17, Vilnius,
+        Lithuania (company code 302896460), registered address Antakalnio g. 17, Vilnius,
         Lithuania. By creating an account you agree to these terms.
       </p>
 
@@ -74,7 +74,7 @@ export default function TermsOfService() {
       <p>These terms are governed by the laws of the Republic of Lithuania, where Lenis res, MB is registered. If you are a consumer, you keep the mandatory consumer protections of the country where you live. Disputes with business customers are handled by the courts of Vilnius, Lithuania.</p>
 
       <h2>12. Contact</h2>
-      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
+      <p>Lenis res, MB - Antakalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
       </LegalShell>
     </>
   );

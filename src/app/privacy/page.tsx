@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
       <p><em>Last updated: October 22, 2026</em></p>
       <p>
         MarginSnap is operated by <strong>Lenis res, MB</strong>, a company
-        registered in Lithuania (company code 302896460), registered address Antalkalnio g. 17,
+        registered in Lithuania (company code 302896460), registered address Antakalnio g. 17,
         Vilnius, Lithuania, &ldquo;we,&rdquo; &ldquo;us.&rdquo; Contact:{" "}
         <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a>.
       </p>
@@ -45,7 +45,7 @@ export default function PrivacyPolicy() {
       <p>Active users are notified by email before a material change takes effect.</p>
 
       <h2>9. Contact</h2>
-      <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
+      <p>Lenis res, MB - Antakalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>
       </LegalShell>
     </>
   );
