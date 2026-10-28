@@ -64,6 +64,7 @@ export function SignInForm({
   const [secondsLeft, setSecondsLeft] = useState(LINK_LIFETIME_SECONDS);
   const [denied, setDenied] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [exists, setExists] = useState(false);
 
   useEffect(() => {
     if (!sent || secondsLeft <= 0) return;
@@ -74,6 +75,25 @@ export function SignInForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFailed(false);
+    setExists(false);
+    // Sign-up form: an email that already has an account is not accepted
+    // here, the person is pointed to Sign in instead.
+    if (mode === "signup") {
+      try {
+        const res = await fetch("/api/signup-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data?.exists) {
+          setExists(true);
+          return;
+        }
+      } catch {
+        // If the check itself fails, carry on: the server still sends the right email.
+      }
+    }
     let result: SignInResponse | undefined;
     try {
       result = await signIn("email", { email, redirect: false, callbackUrl: "/dashboard" });
@@ -161,7 +181,10 @@ export function SignInForm({
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setExists(false);
+              }}
               placeholder="you@example.com"
               style={{
                 flex: 1,
@@ -186,6 +209,11 @@ export function SignInForm({
              page, 2026-09-24) swaps this for plain non-blocking text below
              instead — a returning user shouldn't have to re-click "I agree"
              every time they sign in. */}
+          {exists && (
+            <p style={{ color: "var(--loss)", fontSize: "0.85rem", margin: 0 }}>
+              This email already has an account. <a href="/auth/signin">Sign in instead</a>.
+            </p>
+          )}
           {failed && (
             <p style={{ color: "var(--loss)", fontSize: "0.85rem", margin: 0 }}>
               Could not send the link. Please try again in a moment.
