@@ -120,7 +120,10 @@ export async function createUploadUrl(path: string): Promise<string> {
   let res = await sign();
   if (!res.ok) {
     const text = await res.clone().text().catch(() => "");
-    if (res.status === 404 || /bucket not found/i.test(text)) {
+    // Supabase reports a missing bucket as HTTP 400 with an inner
+    // statusCode "404" ("The related resource does not exist"), not only as a
+    // plain 404, so the body is checked as well.
+    if (res.status === 404 || /"statusCode":\s*"?404"?|not found|does not exist/i.test(text)) {
       await ensureBucket(cfg);
       res = await sign();
     }
