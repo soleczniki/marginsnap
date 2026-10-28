@@ -94,6 +94,22 @@ model Feedback {
   @@map("feedback")
 }
 
+// Closed-beta waiting list (2026-10-28). While sign-ups are closed (the
+// default; see src/lib/beta.ts), a visitor leaves their email here instead of
+// creating an account. An admin invites people from /admin/waitlist: status
+// "invited" lets that email create an account; it becomes "joined" when it
+// does. RLS is enabled inside the migration.
+model WaitlistEntry {
+  id        String    @id @default(cuid())
+  email     String    @unique // always stored lower-case
+  status    String    @default("waiting") // "waiting" | "invited" | "joined"
+  note      String?
+  createdAt DateTime  @default(now())
+  invitedAt DateTime?
+
+  @@map("waitlist")
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String

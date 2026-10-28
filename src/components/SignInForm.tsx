@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, type SignInResponse } from "next-auth/react";
+import { WaitlistForm } from "@/components/WaitlistForm";
 
 // The actual "enter your email" form — split out of src/app/page.tsx
 // (2026-09-16) so that file could become a server component that checks for
@@ -61,6 +62,8 @@ export function SignInForm({
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(LINK_LIFETIME_SECONDS);
+  const [denied, setDenied] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!sent || secondsLeft <= 0) return;
@@ -70,7 +73,24 @@ export function SignInForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await signIn("email", { email, redirect: false, callbackUrl: "/dashboard" });
+    setFailed(false);
+    let result: SignInResponse | undefined;
+    try {
+      result = await signIn("email", { email, redirect: false, callbackUrl: "/dashboard" });
+    } catch {
+      setFailed(true);
+      return;
+    }
+    // Closed beta (2026-10-28): an email with no account and no invitation
+    // is refused by the signIn callback in src/lib/auth.ts.
+    if (result?.error === "AccessDenied") {
+      setDenied(true);
+      return;
+    }
+    if (result?.error) {
+      setFailed(true);
+      return;
+    }
     setSecondsLeft(LINK_LIFETIME_SECONDS);
     setSent(true);
   }
@@ -88,7 +108,29 @@ export function SignInForm({
       <h1 style={{ fontSize: "1.6rem", marginBottom: 8 }}>{title}</h1>
       <p style={{ color: "var(--muted)", marginBottom: 28 }}>{subtitle}</p>
 
-      {sent ? (
+      {denied ? (
+        <>
+          <div className="card" style={{ marginBottom: 12 }}>
+            <p style={{ margin: 0 }}>
+              MarginSnap is in a closed beta and there is no account for this email yet. Join the
+              waiting list and we will invite you when a spot opens. If you already have an account,
+              use the email you signed up with.
+            </p>
+          </div>
+          <WaitlistForm bare initialEmail={email} />
+          <p style={{ marginTop: 12, fontSize: "0.85rem" }}>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setDenied(false);
+              }}
+            >
+              Try a different email
+            </a>
+          </p>
+        </>
+      ) : sent ? (
         <div className="card">
           {expired ? (
             <>
@@ -144,6 +186,11 @@ export function SignInForm({
              page, 2026-09-24) swaps this for plain non-blocking text below
              instead — a returning user shouldn't have to re-click "I agree"
              every time they sign in. */}
+          {failed && (
+            <p style={{ color: "var(--loss)", fontSize: "0.85rem", margin: 0 }}>
+              Could not send the link. Please try again in a moment.
+            </p>
+          )}
           {showTermsCheckbox ? (
             <label
               style={{

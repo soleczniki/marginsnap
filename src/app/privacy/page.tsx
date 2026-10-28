@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
       </p>
 
       <h2>1. What we collect</h2>
-      <p>Your account email (magic-link sign-in, no password stored). Your Etsy shop&rsquo;s OAuth tokens, encrypted at rest. Your shop&rsquo;s listing titles/SKUs and order/receipt history, synced from Etsy. The cost-of-goods figures you enter yourself. Billing status from Stripe (never your card number). Standard server logs.</p>
+      <p>Your account email (magic-link sign-in, no password stored). If you join the waiting list, the email you give there, used only to tell you when a spot opens. Your Etsy shop&rsquo;s OAuth tokens, encrypted at rest. Your shop&rsquo;s listing titles/SKUs and order/receipt history, synced from Etsy. The cost-of-goods figures you enter yourself. Billing status from Stripe (never your card number). Standard server logs.</p>
 
       <h2>2. Why we use it</h2>
       <p>Only to run MarginSnap for you — sync and display your profit data, process your subscription, and support you if you ask. We never sell your data or use it to train any model.</p>

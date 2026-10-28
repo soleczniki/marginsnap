@@ -43,7 +43,7 @@ export function PublicNav({ navId = "public-nav-toggle" }: { navId?: string }) {
           Sign in
         </a>
         <a href="/#start" className="button-accent" style={{ fontSize: "0.85rem" }}>
-          Start free trial
+          Get started
         </a>
       </div>
     </nav>

@@ -846,3 +846,11 @@ report.
 - Sign-up vs sign-in: `sendVerificationRequest` in `src/lib/auth.ts` sends a "Welcome to MarginSnap - confirm your email" message (and `/auth/confirm?n=1` shows matching wording) when no user exists for the address; returning users get the normal sign-in email. It is still the same NextAuth email flow.
 - `/auth/signin` has a header with a close (X) link and the standard footer.
 - Stripe Checkout collects the billing address and optional business name + tax ID (`tax_id_collection`). Automatic tax is off until `STRIPE_AUTOMATIC_TAX=true` is set in Vercel (only after Stripe Tax and its registrations are configured in the Stripe dashboard).
+
+## Closed beta and waiting list (2026-10-28)
+
+- Automatic switch (src/lib/beta.ts, getBetaStatus). Sign-ups are open until the 5 Etsy Personal Access spots are taken (own shop included); then the site shows "beta full" and the waiting list. Taken = connected shops + non-admin sign-ups with a running trial and no connected shop + unused invitations. Env SIGNUPS_OPEN overrides: "true" always open, "false" always closed, unset = automatic.
+- When full, the signIn callback in src/lib/auth.ts lets through existing users and emails whose waiting-list entry is "invited" or "joined"; everyone else gets AccessDenied, which SignInForm turns into the waiting-list form. Landing page and /auth/signin switch wording; the public nav says "Get started" in both states (static pages, no DB read).
+- Public POST /api/waitlist (honeypot, 100 new entries per 10 min cap, always answers ok). Table "waitlist" (model WaitlistEntry): waiting / invited / joined; joined is set in events.createUser.
+- Admin page /admin/waitlist: mode, spots taken with breakdown, invite by email, invite / re-send / remove per row.
+- Commercial Access from Etsy is needed before more than 5 shops can connect; after approval set SIGNUPS_OPEN=true.

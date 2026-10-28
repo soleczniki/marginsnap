@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import nodemailer from "nodemailer";
 import { prisma } from "./db";
+import { isBetaClosed } from "./beta";
 
 // Email magic-link auth (Blueprint decision: "no password reset flow to
 // build; matches the fast, no-friction pitch"). Needs a real SMTP/email API
@@ -93,6 +94,20 @@ export const authOptions: NextAuthOptions = {
     signOut: "/auth/signout",
   },
   callbacks: {
+    // Closed beta (2026-10-28): while sign-ups are closed, only people who
+    // already have an account, or whose email was invited from the admin
+    // waiting list, can get a sign-in link or use one. Runs twice for the
+    // email provider: when the link is requested and when it is used.
+    // Returning false makes the client see the error "AccessDenied".
+    signIn: async ({ user }) => {
+      if (!(await isBetaClosed())) return true;
+      const email = user.email?.toLowerCase();
+      if (!email) return false;
+      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+      if (existing) return true;
+      const invited = await prisma.waitlistEntry.findUnique({ where: { email }, select: { status: true } });
+      return invited?.status === "invited" || invited?.status === "joined";
+    },
     // Database sessions don't include the user id by default — every route
     // above (dashboard, etsy/connect, etsy/callback) relies on session.user.id.
     session: async ({ session, user }) => {
@@ -112,6 +127,12 @@ export const authOptions: NextAuthOptions = {
         where: { id: user.id },
         data: { trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
       });
+      // Waiting list: mark the invited person as joined (best-effort).
+      if (user.email) {
+        await prisma.waitlistEntry
+          .updateMany({ where: { email: user.email.toLowerCase() }, data: { status: "joined" } })
+          .catch(() => undefined);
+      }
     },
   },
 };

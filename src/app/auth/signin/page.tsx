@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { SignInForm } from "@/components/SignInForm";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
+import { isBetaClosed } from "@/lib/beta";
 
 // Dedicated sign-in page (2026-09-24, Bogdan's request) - previously the
 // nav's "Sign in" link just anchored to the bottom of the landing page,
@@ -21,6 +22,7 @@ import { Footer } from "@/components/Footer";
 // Same session-check-then-redirect pattern as src/app/page.tsx: a
 // signed-in visitor who lands here goes straight to /dashboard.
 export default async function SignInPage() {
+  const closed = await isBetaClosed();
   const session = await getServerSession(authOptions);
   if (session?.user?.id) redirect("/dashboard");
 
@@ -51,7 +53,11 @@ export default async function SignInPage() {
         showLegalLinks={false}
       />
       <p style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--muted)", paddingBottom: 40 }}>
-        New here? <a href="/#start">Start your free trial</a> instead.
+        {closed ? (
+          <>New here? The beta is full for now. <a href="/#start">Join the waiting list</a>.</>
+        ) : (
+          <>New here? <a href="/#start">Start your free trial</a> instead.</>
+        )}
       </p>
       <Footer />
     </>

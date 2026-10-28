@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import { SignInForm } from "@/components/SignInForm";
 import { Logo } from "@/components/Logo";
+import { WaitlistForm } from "@/components/WaitlistForm";
+import { isBetaClosed } from "@/lib/beta";
 
 // The actual marketing site for marginsnap.app's root URL (2026-09-17,
 // Bogdan's request — "make it sexy, make it sellable"). Before this, a
@@ -23,7 +25,12 @@ import { Logo } from "@/components/Logo";
 // plainly (not hidden behind the CTA), per Bogdan's call. No real product
 // screenshots yet (Bogdan didn't have any ready) — the "profit breakdown"
 // card below is a labeled illustrative example, not a claimed screenshot.
-export function LandingPage() {
+export async function LandingPage() {
+  // Closed beta (2026-10-28): while the beta is full (all Etsy spots taken, see src/lib/beta.ts), every
+  // "start free trial" call to action becomes "join the waiting list" and the
+  // sign-up form is the waiting list form. Existing users still sign in
+  // from /auth/signin. See src/lib/beta.ts.
+  const closed = await isBetaClosed();
   return (
     <>
       <nav
@@ -59,7 +66,7 @@ export function LandingPage() {
             Sign in
           </a>
           <a href="#start" className="button-accent" style={{ fontSize: "0.85rem" }}>
-            Start free trial
+            {closed ? "Join waiting list" : "Start free trial"}
           </a>
         </div>
       </nav>
@@ -95,10 +102,10 @@ export function LandingPage() {
             </p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <a href="#start" className="button-accent" style={{ fontSize: "1rem", padding: "13px 24px" }}>
-                Start your free trial
+                {closed ? "Join the waiting list" : "Start your free trial"}
               </a>
               <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                30 days free · no card required
+                {closed ? "Closed beta · spots open up gradually" : "30 days free · no card required"}
               </span>
             </div>
           </div>
@@ -184,25 +191,34 @@ export function LandingPage() {
             <li>✓ CSV export</li>
           </ul>
           <a href="#start" className="button-accent" style={{ width: "100%", fontSize: "1rem" }}>
-            Start your 30-day free trial
+            {closed ? "Join the waiting list" : "Start your 30-day free trial"}
           </a>
           <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 8, marginBottom: 0 }}>
-            No card required. Cancel anytime.
+            {closed ? "Closed beta. 30 days free when your spot opens." : "No card required. Cancel anytime."}
           </p>
         </div>
       </section>
 
       {/* ---------- Final CTA: the actual sign-in/sign-up form ---------- */}
       <section style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}>
-        <SignInForm
-          id="signup-form"
-          title="Start your free trial"
-          subtitle="Enter your email and we'll send a link to confirm it. This creates your account and starts your 30-day free trial, no card needed."
-          showLegalLinks={false}
-          submitLabel="Sign up"
-          mode="signup"
-          tight
-        />
+        {closed ? (
+          <WaitlistForm
+            id="signup-form"
+            title="Join the waiting list"
+            subtitle="MarginSnap is in a small closed beta. Leave your email and we will invite you when a spot opens. Your 30-day free trial starts when you create your account, no card needed."
+            tight
+          />
+        ) : (
+          <SignInForm
+            id="signup-form"
+            title="Start your free trial"
+            subtitle="Enter your email and we'll send a link to confirm it. This creates your account and starts your 30-day free trial, no card needed."
+            showLegalLinks={false}
+            submitLabel="Sign up"
+            mode="signup"
+            tight
+          />
+        )}
       </section>
       </div>
 
