@@ -823,3 +823,12 @@ Based on developer reports (GitHub `etsy/open-api` discussions), full
 OAuth-authenticated calls tend to start working somewhere between about a
 week and two weeks after that — not an official SLA, just what people
 report.
+
+## In-app feedback (added 2026-10-28)
+
+- Floating "Feedback" button on every dashboard and admin page (`src/components/FeedbackWidget.tsx`, mounted from `src/app/dashboard/layout.tsx` and `src/app/admin/layout.tsx`); the same form is also at `/dashboard/feedback`.
+- Submissions go to `POST /api/feedback`: saved in the `feedback` table, then a best-effort notification email to `FEEDBACK_NOTIFY_EMAIL` (default hello@marginsnap.app) with Reply-To set to the user's address.
+- Attachments: up to 3 images/videos, 25 MB each. The browser uploads straight to a PRIVATE Supabase Storage bucket `feedback-attachments` (created automatically on first use) through a signed upload URL from `POST /api/feedback/upload-url` - Vercel functions cannot take bodies over ~4.5 MB. Only paths are stored in `feedback.attachments`. Needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel (server-only); without them attachments are switched off and text feedback still works. Files are not deleted automatically.
+- Admin: `/admin/feedback` - filter by status (Open = new + planned, New, Planned, Done, Dismissed, All) and type, per-item status dropdown, private note, attachment previews via one-hour signed links.
+- Migrations: `20261028150000_add_feedback` (table, with RLS enabled) and `20261028180000_feedback_attachments_notes` (attachments + notes columns).
+

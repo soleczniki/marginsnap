@@ -15,12 +15,21 @@ const transport = nodemailer.createTransport({
   },
 });
 
-export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+// options.replyTo (2026-10-28): used by the feedback notification so that
+// hitting Reply in the inbox answers the user, not hello@ itself.
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  options?: { replyTo?: string }
+): Promise<void> {
   await transport.sendMail({
     to,
     from: process.env.EMAIL_FROM ?? "MarginSnap <hello@marginsnap.app>",
     subject,
     html,
     text,
+    ...(options?.replyTo ? { replyTo: options.replyTo } : {}),
   });
 }

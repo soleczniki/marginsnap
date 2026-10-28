@@ -59,8 +59,39 @@ model User {
   accounts Account[]
   sessions Session[]
   shops    Shop[]
+  feedback Feedback[]
 
   @@map("users")
+}
+
+// In-app feedback (2026-10-28, Bogdan's request: an easy way for users to
+// report bugs and ask for features before the public launch). Submitted from
+// /dashboard/feedback (src/app/api/feedback/route.ts), read and triaged by
+// admins on /admin/feedback. userId is nullable with SET NULL so deleting an
+// account keeps the feedback itself; `email` is a snapshot taken at submit
+// time for the same reason. RLS is enabled inside the migration itself —
+// see the "Recurrence, fixed 2026-10-28" note in PROJECT.md.
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String?
+  type      String // "bug" | "feature" | "other"
+  message   String
+  pageUrl   String?
+  userAgent String?
+  status    String   @default("new") // "new" | "planned" | "done" | "dismissed"
+  // [{ path, name, type, size }] - files live in the private Supabase Storage
+  // bucket "feedback-attachments"; only the paths are kept here.
+  attachments Json?
+  // Private admin note, never shown to the user.
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("feedback")
 }
 
 model Account {

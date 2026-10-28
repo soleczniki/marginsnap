@@ -33,6 +33,9 @@ export function AdminHeader({ backHref, backLabel }: { backHref?: string; backLa
             {backLabel}
           </a>
         )}
+        <a href="/admin/feedback" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Feedback
+        </a>
         <a href="/auth/signout" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Sign out
         </a>
