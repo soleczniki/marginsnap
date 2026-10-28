@@ -29,7 +29,7 @@ export function getNotifications(input: {
     notifications.push({
       id: "trial-countdown",
       message: d === 0 ? "Your free trial ends today." : `${d} day${d === 1 ? "" : "s"} left in your free trial.`,
-      ctaLabel: "Subscribe — $9/mo",
+      ctaLabel: "Subscribe — $9.99/mo",
       ctaHref: "/api/stripe/checkout",
     });
   }

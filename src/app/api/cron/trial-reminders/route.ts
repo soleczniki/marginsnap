@@ -46,8 +46,8 @@ export async function GET(request: Request) {
         await sendEmail(
           user.email,
           daysLeft === 1 ? "Your MarginSnap trial ends tomorrow" : `${daysLeft} days left in your MarginSnap trial`,
-          `<p>Hi,</p><p>Your 30-day MarginSnap trial ${timeLeft}. Subscribe for $9/mo anytime to keep your dashboard, syncing, and cost history.</p><p><a href="${DASHBOARD_URL}">Open MarginSnap</a></p>`,
-          `Your MarginSnap trial ${timeLeft}. Subscribe for $9/mo anytime: ${DASHBOARD_URL}`
+          `<p>Hi,</p><p>Your 30-day MarginSnap trial ${timeLeft}. Subscribe for $9.99/mo anytime to keep your dashboard, syncing, and cost history.</p><p><a href="${DASHBOARD_URL}">Open MarginSnap</a></p>`,
+          `Your MarginSnap trial ${timeLeft}. Subscribe for $9.99/mo anytime: ${DASHBOARD_URL}`
         );
         await prisma.user.update({
           where: { id: user.id },
@@ -62,8 +62,8 @@ export async function GET(request: Request) {
         await sendEmail(
           user.email,
           "Renew MarginSnap?",
-          `<p>Hi,</p><p>Your MarginSnap trial ended, but your account and data are still here — nothing's been deleted. Subscribe for $9/mo anytime to pick back up.</p><p><a href="${DASHBOARD_URL}">Renew MarginSnap</a></p>`,
-          `Your MarginSnap trial ended. Subscribe for $9/mo anytime to pick back up: ${DASHBOARD_URL}`
+          `<p>Hi,</p><p>Your MarginSnap trial ended, but your account and data are still here — nothing's been deleted. Subscribe for $9.99/mo anytime to pick back up.</p><p><a href="${DASHBOARD_URL}">Renew MarginSnap</a></p>`,
+          `Your MarginSnap trial ended. Subscribe for $9.99/mo anytime to pick back up: ${DASHBOARD_URL}`
         );
         await prisma.user.update({ where: { id: user.id }, data: { lastRenewalReminderAt: new Date() } });
         renewalsSent++;

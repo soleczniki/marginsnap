@@ -19,7 +19,7 @@ export default function TermsOfService() {
     <>
       <LegalShell>
       <h1>MarginSnap Terms of Service</h1>
-      <p><em>Last updated: October 22, 2026</em></p>
+      <p><em>Last updated: October 28, 2026</em></p>
       <p>
         Operated by <strong>Lenis res, MB</strong>, a company registered in
         Lithuania (company code 302896460), registered address Antalkalnio g. 17, Vilnius,
@@ -49,7 +49,11 @@ export default function TermsOfService() {
          a second tier, a different billing cycle, anything about how
          subscriptions work — update this section too; see the matching
          reminder on checkout/route.ts. */}
-      <p>MarginSnap is a paid monthly subscription, billed in advance via Stripe. Current pricing is shown at checkout and in your account&rsquo;s billing settings. Cancel anytime via the Stripe customer portal in Settings; no refunds for partial billing periods; pricing changes get 30 days&rsquo; notice.</p>
+      <p>MarginSnap is a paid monthly subscription, billed in advance via Stripe. Current pricing is shown at checkout and in your account&rsquo;s billing settings. Prices are shown without VAT or other sales tax. Where tax applies, it is calculated at checkout from your billing country and added to the price; businesses in the EU that enter a valid VAT number are invoiced under the reverse-charge rule. Cancel anytime via the Stripe customer portal in Settings; cancelling stops the next renewal and you keep access until the end of the period you have paid for. Apart from the right of withdrawal below, we do not refund partial billing periods. Pricing changes get 30 days&rsquo; notice.</p>
+      <p>If you are a consumer in the EU/EEA, you can withdraw from a new paid subscription within 14 days of your first payment and get that payment refunded in full: write to <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a>. Refunds are issued with a credit note to the original payment method.</p>
+
+      <h2>5a. Free trial</h2>
+      <p>Every new account gets a 30-day free trial that starts when the account is created. No card is needed and nothing is charged during the trial. We email you before it ends. When it ends, access to your dashboard pauses until you subscribe; your data is kept. You are never charged automatically at the end of the trial: a paid subscription starts only when you choose to subscribe at checkout.</p>
 
       <h2>6. Acceptable use</h2>
       <p>No violating Etsy&rsquo;s terms, no accessing another seller&rsquo;s data, no scraping or reselling the service, no connecting a shop you&rsquo;re not authorized to manage.</p>
@@ -58,7 +62,7 @@ export default function TermsOfService() {
       <p>You own your shop&rsquo;s order history and the cost figures you enter. Export as CSV anytime; delete your account and our copy whenever you choose.</p>
 
       <h2>8. Disclaimers and liability</h2>
-      <p>Provided &ldquo;as is.&rdquo; We don&rsquo;t guarantee uninterrupted service or that Etsy&rsquo;s API stays available. To the extent permitted by law, our total liability to you for any claim arising from your use of MarginSnap is limited to the amount you paid us in the 12 months before the claim.</p>
+      <p>Provided &ldquo;as is.&rdquo; We don&rsquo;t guarantee uninterrupted service or that Etsy&rsquo;s API stays available. To the extent permitted by law, our total liability to you for any claim arising from your use of MarginSnap is limited to the amount you paid us in the 12 months before the claim. Nothing in these terms limits liability that cannot be limited by law, such as liability for intent, gross negligence or personal injury, or the mandatory rights you have as a consumer.</p>
 
       <h2>9. Termination</h2>
       <p>You can leave anytime. We may suspend an account that violates these terms or Etsy&rsquo;s own policies, with notice where practical.</p>
@@ -67,7 +71,7 @@ export default function TermsOfService() {
       <p>Active users notified by email before a material change takes effect.</p>
 
       <h2>11. Governing law</h2>
-      <p>These terms are governed by the laws of the Republic of Lithuania, where Lenis res, MB is registered.</p>
+      <p>These terms are governed by the laws of the Republic of Lithuania, where Lenis res, MB is registered. If you are a consumer, you keep the mandatory consumer protections of the country where you live. Disputes with business customers are handled by the courts of Vilnius, Lithuania.</p>
 
       <h2>12. Contact</h2>
       <p>Lenis res, MB — Antalkalnio g. 17, Vilnius, Lithuania · <a href="mailto:hello@marginsnap.app">hello@marginsnap.app</a></p>

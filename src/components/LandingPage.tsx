@@ -180,8 +180,11 @@ export async function LandingPage() {
             One plan. Everything included.
           </p>
           <p style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: "2.6rem", fontWeight: 700 }}>$9</span>
+            <span style={{ fontSize: "2.6rem", fontWeight: 700 }}>$9.99</span>
             <span style={{ color: "var(--muted)" }}>/month</span>
+            <span style={{ display: "block", fontSize: "0.8rem", color: "var(--muted)", marginTop: 2 }}>
+              + VAT where applicable
+            </span>
           </p>
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 18px", color: "var(--muted)", lineHeight: 1.7, textAlign: "left", display: "inline-block" }}>
             <li>✓ Unlimited orders &amp; listings</li>
@@ -358,7 +361,7 @@ function ProfitExampleCard() {
 const COMPARISON_ROWS = [
   { label: "Setup time", spreadsheet: "Hours, and upkeep every week", others: "Setup for multi-channel teams", marginsnap: "Minutes — connect and go" },
   { label: "Built for Etsy specifically", spreadsheet: "You look up every fee rule yourself", others: "Etsy is one of many marketplaces supported", marginsnap: "Etsy fees, VAT, and shipping built in" },
-  { label: "Price", spreadsheet: "Free, but costs you hours", others: "$15–$79/mo", marginsnap: "$9/mo, one plan" },
+  { label: "Price", spreadsheet: "Free, but costs you hours", others: "$15–$79/mo", marginsnap: "$9.99/mo, one plan" },
 ];
 
 // Real <table> on desktop; below 640px a 4-column table has no room to

@@ -7,10 +7,10 @@ export function TrialEndedScreen() {
     <main style={{ maxWidth: 480, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
       <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Your free trial has ended</h1>
       <p style={{ color: "var(--muted)", marginBottom: 24 }}>
-        Your data is safe — nothing&rsquo;s been deleted. Subscribe for $9/mo to pick up right where you left off.
+        Your data is safe — nothing&rsquo;s been deleted. Subscribe for $9.99/mo to pick up right where you left off.
       </p>
       <a href="/api/stripe/checkout" className="button">
-        Subscribe for $9/mo
+        Subscribe for $9.99/mo
       </a>
     </main>
   );

@@ -58,7 +58,7 @@ export function SubpageHeader({
           href={isSubscribed ? "/api/stripe/portal" : "/api/stripe/checkout"}
           style={{ fontSize: "0.85rem", color: "var(--muted)" }}
         >
-          {isSubscribed ? "Manage billing" : "Subscribe — $9/mo"}
+          {isSubscribed ? "Manage billing" : "Subscribe — $9.99/mo"}
         </a>
         <a href="/dashboard/listings" style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
           Costs

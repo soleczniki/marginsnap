@@ -64,7 +64,7 @@ Etsy one is real work for v1.
 
 ## Billing & free trial (2026-09-17, Bogdan's decisions)
 
-$9/mo, single tier, no free-during-beta option. 30-day free trial, no card
+$9.99/mo (USD, price excludes VAT/tax - Stripe Tax adds it where applicable), single tier, no free-during-beta option. 30-day free trial, no card
 collected up front, starting **at signup** (not at Etsy-connect) so a slow
 setup can't quietly extend it. See "Billing/trial system shipped" under
 Current status for the full build. Still needed from Bogdan before this
