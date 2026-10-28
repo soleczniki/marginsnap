@@ -79,6 +79,15 @@ from Stripe test mode to live mode — see "Before beta launch" below.
 Small known issues, not part of the phased roadmap above — pick up when
 convenient, not blocking anything:
 
+- **Period comparison like Sellerboard** (2026-10-28, planned as the first
+  feature after the beta starts). Add a "vs previous period" option to the
+  dashboard: compare the selected range with the previous range of the same
+  length on the summary tiles (revenue, fees, costs, ad spend, profit,
+  margin) with an up/down arrow and percent change. Limit: sync only loads
+  the last 90 days of receipts (src/lib/sync.ts), so longer comparisons
+  (quarter over quarter, year over year) need a deeper sync first - weigh
+  that against Etsy rate limits while on Personal Access. Show "not enough
+  history yet" when the earlier period is not fully covered.
 - **Magic-link sign-in occasionally fails** ("The sign in link is no longer
   valid") on a first click (2026-09-15). Most likely cause: an email
   security scanner (Gmail's own link-scanning, or a corporate mail gateway)
